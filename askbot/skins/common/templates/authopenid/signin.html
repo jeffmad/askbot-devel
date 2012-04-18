@@ -84,7 +84,7 @@
             {{login_form.password_action}}
             {% if user.is_anonymous() %}
                 <h2 id="password-heading">
-                    {% trans %}Please enter your <span>user name and password</span>, then sign in{% endtrans %}
+                    {% trans %}Please enter your <em>SEA</em> username and password, then click sign in. (Do not include SEA){% endtrans %}
                 </h2>
                 {% if have_buttons %}
                     <p class="hint">{% trans %}(or select another login method above){% endtrans %}</p>
@@ -94,7 +94,7 @@
                 {% endif %}
                 <table class="login">
                     <tr>
-                        <td><label for="id_username">{% trans %}Login or email{% endtrans %}</label></td>
+                        <td><label for="id_username">{% trans %}SEA\{% endtrans %}</label></td>
                         <td>{{login_form.username}}</td>
                     </tr>
                     <tr>
