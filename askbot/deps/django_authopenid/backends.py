@@ -10,8 +10,120 @@ from django.utils.translation import ugettext as _
 from askbot.deps.django_authopenid.models import UserAssociation
 from askbot.deps.django_authopenid import util
 from askbot.conf import settings as askbot_settings
+from django.conf import settings
 
 log = logging.getLogger('configuration')
+
+def ldap_expedia_authenticate(username, password):
+    """
+    Authenticate using ldap
+    expedia ldap does not allow anon lookups
+    there is a service acct 
+    python-ldap must be installed
+    http://pypi.python.org/pypi/python-ldap/2.4.6
+    """
+    import ldap
+    l = ldap.initialize(askbot_settings.LDAP_URL)
+    logging.critical('authenticating with ldap')
+    # add this because windows gives error
+    l.set_option(ldap.OPT_REFERRALS,0)
+    user =  settings.LDAP_USER
+    pwd = settings.LDAP_PASSWORD
+    try:
+        l.simple_bind_s(user,pwd)
+    except ldap.LDAPError, e:
+        logging.critical('caught ldapError binding. user={0}, server={1}, error={2}'.format(user, serverName, e.message['info']))
+        if type(e.message) == dict and e.message.has_key('desc'):
+            logging.critical('x caught ldap error: {0}'.format(e.message['desc']))
+        else:
+            logging.critical('ldap error {0}'.format(repr(e)))
+    scope = ldap.SCOPE_SUBTREE
+    base = settings.LDAP_BASE
+    keyword = username
+    filter = '(&(objectclass=user)(sAMAccountName=' + keyword + '))'
+    retrieve_attributes = ['displayName', 'mail']
+    # if retrieve_attributes = None then all will be returned
+    #retrieve_attributes = None
+    count = 0
+    result_set = []
+    timeout = 0
+    fullName = ''
+    mail = ''
+    try:
+        result_id = l.search(base, scope, filter, retrieve_attributes)
+        #print 'result is: ' + repr(result_id)
+        while 1:
+            result_type, result_data = l.result(result_id, timeout)
+            if(result_data == []):
+                break
+            else:
+                if result_type == ldap.RES_SEARCH_ENTRY:
+                    result_set.append(result_data)
+        if len(result_set) == 0:
+            logging.debug('No results found for user={0}'.format(username))
+            return None;
+        else:
+            for i in range(len(result_set)):
+                for entry in result_set[i]:
+                    # what comes back is a tuple len 2
+                    # first entry is string DN used for next query
+                    # second entry is a map. one key per 
+                    # retrieve attribute. the corresponding value
+                    # for the key is a list with len = 1
+                    dn = entry[0]
+                    fullName = entry[1]['displayName'][0]
+                    mail = entry[1]['mail'][0]
+                    #mail = '{0}@expedia.com'.format(entry[1]['mail'][0])
+                    #print 'dn ={0}'.format(dn)
+                    #print 'displayName ={0}'.format(fullName)
+                    #print 'email ={0}'.format(mail)
+                    #print 'result: ' + repr(entry) + '\n'
+    except ldap.LDAPError, error_message:
+        logging.critical('caught errorin ldap results: {0} while querying username = {1} '.format(str(error_message, username)))
+        return None;
+    try:
+        # now that we have a DN, we can try to bind with it, 
+        # along with the user provided password
+        # a DN looks like this: 'CN=John Smith (jsmith),OU=User Policy 0,OU=All Users,DC=DET,DC=CORP,DC=MSFTCN,DC=com'
+        l.bind_s(dn, password)
+        logging.error('logon success, now looking up user in db')
+        try:
+            user = User.objects.get(email=mail)
+            # always update user profile to synchronize with ldap server
+            logging.error('found user')
+            user.username = username
+            #user.set_password('')
+            #user.first_name = ''#first_name
+            #user.last_name = ''#last_name
+            #user.email = mail
+            user.save()
+        except User.DoesNotExist:
+            # create new user in local db
+            logging.error('did not find user, creating')
+            user = User()
+            user.username = username
+            user.set_password('')
+            user.first_name = ''#first_name
+            user.last_name ='' # last_name
+            user.email =  mail
+            user.is_staff = False
+            user.is_superuser = False
+            user.is_active = True
+            user.save()
+        logging.info('Created New User : [{0}]'.format(username))
+        return user
+    except ldap.LDAPError, error_message:
+        logging.debug('user {0} incurred LDAPError: {1} '.format(username, str(error_message)))
+        return None
+    except ldap.INVALID_CREDENTIALS, error_message:
+        logging.debug('user {0} presented invalid credentials: {1} '.format(username, str(error_message)))
+        return None
+    except Exception, error_message:
+        logging.debug('user {0} encountered generic exception: {1} '.format(username, str(error_message)))
+        return None
+
+    finally:
+        l.unbind_s()
 
 
 def ldap_authenticate(username, password):
@@ -234,7 +346,7 @@ class AuthBackend(object):
                 return None
 
         elif method == 'ldap':
-            user = ldap_authenticate(username, password)
+            user = ldap_expedia_authenticate(username, password)
 
         elif method == 'wordpress_site':
             try:

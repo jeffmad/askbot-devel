@@ -322,14 +322,19 @@ def signin(request):
                         login(request, user)
                         return HttpResponseRedirect(next_url)
                     else:
-                        return finalize_generic_signin(
-                                request = request,
-                                user = user,
-                                user_identifier = username,
-                                login_provider_name = ldap_provider_name,
-                                redirect_url = next_url
-                            )
 
+                        msg = _('Invalid username or password '
+                                'please try again '
+                            ) % {'provider': provider_name}
+                        request.user.message_set.create(message = msg)
+                        login_form.set_password_login_error()
+                        #    return finalize_generic_signin(
+                        #            request = request,
+                        #            user = user,
+                        #            user_identifier = username,
+                        #            login_provider_name = 'local',
+                        #            redirect_url = next_url
+                        #        )
                 else:
                     if password_action == 'login':
                         user = authenticate(
