@@ -39,6 +39,9 @@ from askbot.templatetags import extra_tags
 import askbot.conf
 from askbot.conf import settings as askbot_settings
 from askbot.skins.loaders import render_into_skin, get_template #jinja2 template loading enviroment
+from haystack.query import SearchQuerySet
+from askbot.models.question import Thread
+ 
 
 # used in index page
 #todo: - take these out of const or settings
@@ -604,3 +607,23 @@ def widget_questions(request):
     }
     return render_into_skin('question_widget.html', data, request) 
     
+def autocomplete(request):
+    term = request.GET['term']
+    threads = SearchQuerySet().autocomplete(title_auto=term).models(Thread)
+    posts = SearchQuerySet().autocomplete(text_auto=term).models(Post)
+    tags = SearchQuerySet().autocomplete(tagnames_auto=term).models(Thread)
+    results = []
+    rs = set()
+    for t in threads:
+        if t.object.id not in rs:
+            rs.add(t.object.id)
+            results.append({ 'label' :t.object.title, 'value': t.object.get_abs
+    for p in posts:
+        if p.object.thread.id not in rs:
+            rs.add(p.object.thread.id)
+            results.append({ 'label' : p.object.thread.title, 'value' :p.object
+    for t in tags:
+        if t.object.id not in rs:
+            rs.add(t.object.id)
+            results.append( { 'label' : t.object.title, 'value': t.object.get_a
+    return HttpResponse(simplejson.dumps(results), content_type='application/js

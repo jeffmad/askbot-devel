@@ -247,6 +247,31 @@ body.user-messages {
   margin: 0;
   text-decoration: none;
 }
+#solrNav {
+    float: right;
+}
+#solrNav a {
+    color: #e2e2ae;
+    padding: 0px 0px 0px 0px;
+    height: 55px;
+    width: 100px;
+    line-height: 30px;
+    margin: 0px 0px 0px 5px;
+    font-size: 18px;
+    font-weight: 100;
+    text-decoration: none;
+    display: block;
+    float: left;
+}
+#solrSearchButton {
+    /*border-right: #afaf9e 1px solid; */
+    width: 50px;
+    height: 25px;
+    display: block;
+    float: left;
+    background: white url(../images/solr.png) no-repeat;
+}
+.ui-autocomplete-loading { background: white url('images/ui-anim_basic_16x16.gif') right center no-repeat; }
 #metaNav {
   /* Top Navigation bar containing links for tags, people and badges, check widgets/header.html */
 

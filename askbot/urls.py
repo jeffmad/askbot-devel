@@ -159,6 +159,12 @@ urlpatterns = patterns('',
         views.readers.tags, 
         name='tags'
     ),
+    url(r'^search/', include('askbot.haystack_urls')),
+    url(
+        r'^%s$' % _('search_autocomplete/'),
+        views.readers.autocomplete,
+        name='autocomplete'
+    ),
     url(#ajax only
         r'^%s%s$' % ('mark-tag/', 'interesting/'),
         views.commands.mark_tag,
