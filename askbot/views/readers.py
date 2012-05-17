@@ -617,13 +617,13 @@ def autocomplete(request):
     for t in threads:
         if t.object.id not in rs:
             rs.add(t.object.id)
-            results.append({ 'label' :t.object.title, 'value': t.object.get_abs
+            results.append({ 'label' :t.object.title, 'value': t.object.get_absolute_url()})
     for p in posts:
         if p.object.thread.id not in rs:
             rs.add(p.object.thread.id)
-            results.append({ 'label' : p.object.thread.title, 'value' :p.object
+            results.append({ 'label' : p.object.thread.title, 'value' :p.object.thread.get_absolute_url()})
     for t in tags:
         if t.object.id not in rs:
             rs.add(t.object.id)
-            results.append( { 'label' : t.object.title, 'value': t.object.get_a
-    return HttpResponse(simplejson.dumps(results), content_type='application/js
+            results.append( { 'label' : t.object.title, 'value': t.object.get_absolute_url()})
+    return HttpResponse(simplejson.dumps(results), content_type='application/json')

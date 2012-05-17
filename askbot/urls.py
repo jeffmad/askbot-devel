@@ -159,7 +159,7 @@ urlpatterns = patterns('',
         views.readers.tags, 
         name='tags'
     ),
-    url(r'^search/', include('askbot.haystack_urls')),
+    url(r'^search/', include('haystack.urls')),
     url(
         r'^%s$' % _('search_autocomplete/'),
         views.readers.autocomplete,
