@@ -1892,7 +1892,10 @@ ul#related-tags li {
 .question-page .answered-by-owner .vote-buttons {
   margin-right: 10px;
 }
-.question-page .answer-img-accept:hover {
+.question-page .answer-img-accept { 
+  background: url(../images/vote-accepted.png); width: 23px; height: 23px; 
+} 
+.question-page .accepted-answer .answer-img-accept, .question-page .answer-img-accept:hover { 
   background: url(../images/vote-accepted-on.png);
 }
 .question-page .answer-body a {
