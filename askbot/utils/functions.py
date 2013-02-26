@@ -1,8 +1,8 @@
 import re
+import random
 import datetime
 from django.utils.translation import ugettext as _
 from django.utils.translation import ungettext
-from django.contrib.auth.models import User
 
 def get_from_dict_or_object(source, key):
     try:
@@ -18,6 +18,25 @@ def enumerate_string_list(strings):
     numbered_strings = enumerate(strings, start = 1)
     return [ '%d) %s' % item for item in numbered_strings ]
 
+def pad_string(text):
+    """Inserts one space between words,
+    including one space before the first word
+    and after the last word.
+    String without words is collapsed to ''
+    """
+    words = text.strip().split()
+    if len(words) > 0:
+        return ' ' + ' '.join(words) + ' '
+    else:
+        return ''
+
+def split_list(text):
+    """Takes text, representing a loosely formatted
+    list (comma, semicolon, empty space separated
+    words) and returns a list() of words.
+    """
+    text = text.replace(',', ' ').replace(';', ' ')
+    return text.strip().split()
 
 def is_iterable(thing):
     if hasattr(thing, '__iter__'):
@@ -143,8 +162,16 @@ def setup_paginator(context):
         }
 
 def get_admin():
-    '''Returns an admin users, usefull for raising flags'''
+    """Returns an admin users, usefull for raising flags"""
     try:
+        from django.contrib.auth.models import User
         return User.objects.filter(is_superuser=True)[0]
     except:
         raise Exception('there is no admin users')
+
+def generate_random_key(length=16):
+    """return random string, length is number of characters"""
+    random.seed()
+    assert(isinstance(length, int))
+    format_string = '%0' + str(2*length) + 'x'
+    return format_string % random.getrandbits(length*8)

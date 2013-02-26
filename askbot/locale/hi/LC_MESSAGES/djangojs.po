@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: askbot\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-03-11 22:22-0500\n"
+"POT-Creation-Date: 2012-04-18 18:53-0500\n"
 "PO-Revision-Date: 2012-02-27 09:25+0000\n"
 "Last-Translator: Chandan kumar <chandankumar.093047@gmail.com>\n"
 "Language-Team: Hindi (http://www.transifex.net/projects/p/askbot/language/"
@@ -136,15 +136,15 @@ msgstr "आपकी  प्रविष्टियाँ अभी पुन�
 msgid "post deleted"
 msgstr "आपकी प्रविष्टियाँ को मिटा दिया गया है "
 
-#: skins/common/media/js/post.js:1202
+#: skins/common/media/js/post.js:1206
 msgid "add comment"
 msgstr "टिप्पणी जोड़ें"
 
-#: skins/common/media/js/post.js:1205
+#: skins/common/media/js/post.js:1209
 msgid "save comment"
 msgstr "टिप्पणी सहेजे "
 
-#: skins/common/media/js/post.js:1870
+#: skins/common/media/js/post.js:1874
 msgid "Please enter question title (>10 characters)"
 msgstr "प्रश्न के शीर्षक (>10 अक्षर) दर्ज करें"
 
@@ -318,7 +318,7 @@ msgstr "कृपया चुनें और फ़ाइल को अपल�
 #~ msgid "cancel"
 #~ msgstr "रद्द करें"
 
-#~ msgid "confirm abandon comment"
+#~ msgid "Are you sure you don't want to post this comment?"
 #~ msgstr "क्या आप सुनिश्चित करेंगे कि आप इस टिप्पणी को पोस्ट नहीं करना चाहते हैं?"
 
 #~ msgid "confirm delete comment"

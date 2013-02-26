@@ -6,10 +6,12 @@ from decimal import Decimal
 from django import forms
 from django.conf import settings as django_settings
 from django.core.exceptions import ImproperlyConfigured
+from django.core.cache import cache
 from django.utils import simplejson
 from django.utils.datastructures import SortedDict
 from django.utils.encoding import smart_str
-from django.utils.translation import gettext, ugettext_lazy as _
+from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy
 from django.core.files import storage
 from askbot.deps.livesettings.models import find_setting, LongSetting, Setting, SettingNotSet
 from askbot.deps.livesettings.overrides import get_overrides
@@ -66,7 +68,7 @@ class SuperGroup(object):
             self.groups.append(group)
 
 
-BASE_SUPER_GROUP = SuperGroup(_('Main'))
+BASE_SUPER_GROUP = SuperGroup(ugettext_lazy('Main'))
 
 class ConfigurationGroup(SortedDotDict):
     """A simple wrapper for a group of configuration values"""
@@ -125,7 +127,11 @@ class ConfigurationGroup(SortedDotDict):
         vals = super(ConfigurationGroup, self).values()
         return [v for v in vals if v.enabled()]
 
-BASE_GROUP = ConfigurationGroup('BASE', _('Base Settings'), ordering=0)
+BASE_GROUP = ConfigurationGroup(
+                            'BASE',
+                            ugettext_lazy('Base Settings'),
+                            ordering=0
+                        )
 
 class Value(object):
 
@@ -149,6 +155,7 @@ class Value(object):
             - `hidden` - If true, then render a hidden field.
             - `default` - If given, then this Value will return that default whenever it has no assocated `Setting`.
             - `update_callback` - if given, then this value will call the callback whenever updated
+            - `clear_cache` - if `True` - clear all the caches on updates
         """
         self.group = group
         self.key = key
@@ -159,6 +166,7 @@ class Value(object):
         self.hidden = kwargs.pop('hidden', False)
         self.update_callback = kwargs.pop('update_callback', None)
         self.requires = kwargs.pop('requires', None)
+        self.clear_cache = kwargs.pop('clear_cache', False)
         if self.requires:
             reqval = kwargs.pop('requiresvalue', key)
             if not is_list_or_tuple(reqval):
@@ -239,7 +247,7 @@ class Value(object):
                 for x in self.choices:
                     if x[0] in self.default:
                         work.append(smart_str(x[1]))
-                note = gettext('Default value: ') + ", ".join(work)
+                note = _('Default value: ') + ", ".join(work)
 
             else:
                 note = _("Default value: %s") % unicode(self.default)
@@ -366,6 +374,9 @@ class Value(object):
                     s.save()
 
                 signals.configuration_value_changed.send(self, old_value=current_value, new_value=new_value, setting=self)
+                
+                if self.clear_cache:
+                    cache.clear()
 
                 return True
         else:

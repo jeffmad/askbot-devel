@@ -7,7 +7,7 @@ For example number of times a person can vote each day, etc.
 from askbot.conf.settings_wrapper import settings
 from askbot.conf.super_groups import REP_AND_BADGES
 from askbot.deps.livesettings import ConfigurationGroup, IntegerValue
-from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy as _
 
 VOTE_RULES = ConfigurationGroup(
                     'VOTE_RULES', 
@@ -65,7 +65,7 @@ settings.register(
     IntegerValue(
         VOTE_RULES,
         'MIN_FLAGS_TO_HIDE_POST',
-        default=3,
+        default=2,
         description=_('Number of flags required to automatically hide posts')
     )
 )
@@ -74,7 +74,7 @@ settings.register(
     IntegerValue(
         VOTE_RULES,
         'MIN_FLAGS_TO_DELETE_POST',
-        default=5,
+        default=3,
         description=_('Number of flags required to automatically delete posts')
     )
 )

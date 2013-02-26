@@ -1,6 +1,95 @@
 Changes in Askbot
 =================
 
+Development version
+-------------------
+* Added full text support for some languages with Postgresql:
+  Danish, Dutch, English, Finnish, French, German, Hungarian,
+  Italian, Japanese (requires package textsearch_ja), Norwegian,
+  Portugese, Romanian, Russian, Spanish, Swedish, Turkish.
+  
+
+0.7.48 (Jan 28, 2013)
+---------------------
+* made "how to ask the question" instructions editable
+* added RSS auto-discovery link
+* added support for multilingual site (experimental)
+* tag subscription manager on the tags page (Adolfo)
+
+0.7.47 (Dec 13, 2012)
+---------------------
+* Bugfix release
+
+0.7.46 (Dec 12, 2012)
+---------------------
+* Bugfix release
+
+0.7.45 (Dec 12, 2012)
+---------------------
+* Feedback sender's email is added to the Reply-To header
+  in the feedback form (Evgeny)
+* Reimplemented search as drop-down (Evgeny)
+* Basic design to work on smartphones (Evgeny)
+* Allowed use of alternative form on the user signup page (Evgeny)
+
+0.7.44 (Nov 11, 2012)
+---------------------
+* Support for django 1.4 (Adolfo)
+* Added option to enable/disable rss feeds (Evgeny)
+* Added minimum reputation to insert links and hotlinked images (Evgeny)
+* Added minimum reputation to suggest links as plain text (Evgeny)
+* Added support of Haystack for search (Adolfo)
+* Added minimum reputation setting to accept any answer as correct (Evgeny)
+* Added "VIP" option to groups - if checked, all posts belong to the group and users of that group in the future will be able to moderate those posts. Moderation features for VIP group are in progress (Evgeny)
+* Added setting `NOTIFICATION_DELAY_TIME` to use with enabled celery daemon (Adolfo)
+* Added setting `ASKBOT_INTERNAL_IPS` - to allow anonymous access to 
+  closed sites from dedicated IP addresses (Evgeny)
+* Moved default skin from `askbot/skins/default` to simply `askbot` (Evgeny)
+* Repost comment as answer (Adolfo)
+* Question list widget (Adolfo)
+* Ask a question widget (Adolfo)
+* Embeddable widget generator (Adolfo)
+* Groups are shown in the dropdown menu in the header (Adolfo)
+* Added group moderation requests to the moderators inboxes (Evgeny)
+* Group joining may be open/closed or moderated (Evgeny)
+* Adding "extra options" to the ldap session (Evgeny)
+* Tag moderation (Evgeny)
+* Editable optional three level category selector for the tags (Evgeny)
+* Tag editor adding tags as they are typed (Evgeny)
+* Added optional support for unicode slugs (Evgeny)
+* Allow switching comment with answer and answer with question comment (Adolfo)
+* Allow user names longer than 30 characters (Evgeny)
+* Option to disable feedback form for the anonymos users (Evgeny)
+* Optional restriction to have confirmed email address to join forum (Evgeny)
+* Optional list of allowed email addresses and email domain name for the new users (Evgeny)
+* Optional support for unicode slugs (Evgeny)
+* Optionally allow limiting one answer per question per person (Evgeny)
+* Added management command `build_livesettings_cache` (Adolfo)
+* Administrators can post under fictional user accounts without logging out (jtrain, Evgeny)
+* Welcome email for the case when replying by email is enabled (Evgeny)
+* Detection of email signature based on the response to the welcome email (Evgeny)
+* Hide "website" and "about" section of the blocked user profiles
+  to help prevent user profile spam (Evgeny)
+* Added a function to create a custom user profile tab,
+  the feature requires access to the server (Evgeny)
+* Added optional top banner to the question page (Evgeny)
+* Made "bootstrap mode" default and created instead "large site mode" (Evgeny)
+* Added interesting/ignored/subscribed tags to the user profile page (Paul Backhouse, Evgeny)
+
+0.7.43 (May 14, 2012)
+---------------------
+* User groups (Evgeny)
+* Public/Private/Hidden reputation (Evgeny)
+* Enabling/disabling the badges system (Evgeny)
+* Created a basic post moderation feature (Evgeny)
+* Created a way to specify reasons for rejecting posts in a modal dialog (Evgeny)
+* A number of bug fixes (Adolfo Fitoria, Jim Tittsler, 
+  Evgeny Fadeev, Robin Stocker, Radim Řehůřek, Silvio Heuberger)
+
+0.7.41, 0.7.42 (April 21, 2012)
+-------------------------------
+* Bug fixes
+
 0.7.40 (March 29, 2012)
 -----------------------
 * New data models!!! (`Tomasz Zieliński <http://pyconsultant.eu>`_)

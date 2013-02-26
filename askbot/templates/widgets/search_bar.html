@@ -1,0 +1,23 @@
+{% if active_tab != "ask" %}
+{% spaceless %}
+<div id="searchBar" {% if query %}class="cancelable"{% endif %}>
+    {# url action depends on which tab is active #}
+            {% if active_tab == "tags" %}
+                <input type="hidden" name="t" value="tag"/>
+            {% else %}
+                {% if active_tab == "users" %}
+                    <input type="hidden" name="t" value="user"/>
+                {% endif %}
+            {% endif %}
+            {# class was searchInput #}
+            <input 
+                class="searchInput" 
+                type="text" 
+                autocomplete="off"
+                value="{{ query|default_if_none('') }}" 
+                name="query" 
+                id="keywords"
+            />
+</div>
+{% endspaceless %}
+{% endif %}

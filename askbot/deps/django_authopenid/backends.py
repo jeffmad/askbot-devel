@@ -6,10 +6,16 @@ import datetime
 import logging
 from django.contrib.auth.models import User
 from django.core.exceptions import ImproperlyConfigured
+from django.conf import settings as django_settings
 from django.utils.translation import ugettext as _
 from askbot.deps.django_authopenid.models import UserAssociation
 from askbot.deps.django_authopenid import util
+from askbot.deps.django_authopenid.ldap_auth import ldap_authenticate
+from askbot.deps.django_authopenid.ldap_auth import ldap_create_user
 from askbot.conf import settings as askbot_settings
+from askbot.models.signals import user_registered
+
+LOG = logging.getLogger(__name__)
 from django.conf import settings
 
 log = logging.getLogger('configuration')
@@ -208,6 +214,8 @@ class AuthBackend(object):
     the reason there is only one class - for simplicity of
     adding this application to a django project - users only need
     to extend the AUTHENTICATION_BACKENDS with a single line
+
+    todo: it is not good to have one giant do all 'authenticate' function
     """
 
     def authenticate(
@@ -247,7 +255,7 @@ class AuthBackend(object):
                     except User.DoesNotExist:
                         return None
                     except User.MultipleObjectsReturned:
-                        logging.critical(
+                        LOG.critical(
                             ('have more than one user with email %s ' +
                             'he/she will not be able to authenticate with ' +
                             'the email address in the place of user name') % email_address
@@ -269,11 +277,13 @@ class AuthBackend(object):
                         if created:
                             user.set_password(password)
                             user.save()
+                            user_registered.send(None, user = user)
                         else:
                             #have username collision - so make up a more unique user name
                             #bug: - if user already exists with the new username - we are in trouble
                             new_username = '%s@%s' % (username, provider_name)
                             user = User.objects.create_user(new_username, '', password)
+                            user_registered.send(None, user = user)
                             message = _(
                                 'Welcome! Please set email address (important!) in your '
                                 'profile and adjust screen name, if necessary.'
@@ -298,15 +308,17 @@ class AuthBackend(object):
             assoc.openid_url = username + '@' + provider_name#has to be this way for external pw logins
 
         elif method == 'openid':
-            provider_name = util.get_provider_name(openid_url)
             try:
-                assoc = UserAssociation.objects.get(
-                                            openid_url = openid_url,
-                                            provider_name = provider_name
-                                        )
+                assoc = UserAssociation.objects.get(openid_url=openid_url)
                 user = assoc.user
             except UserAssociation.DoesNotExist:
                 return None
+            except UserAssociation.MultipleObjectsReturned:
+                logging.critical(
+                    'duplicate openid url in the database!!! %s' % openid_url
+                )
+                return None
+                
 
         elif method == 'email':
             #with this method we do no use user association
@@ -322,7 +334,7 @@ class AuthBackend(object):
                 return None
 
         elif method == 'oauth':
-            if login_providers[provider_name]['type'] == 'oauth':
+            if login_providers[provider_name]['type'] in ('oauth', 'oauth2'):
                 try:
                     assoc = UserAssociation.objects.get(
                                                 openid_url = oauth_user_id,

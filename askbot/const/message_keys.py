@@ -20,19 +20,26 @@ __all__ = []
 #messages loaded in the templates via direct _ calls
 _('most relevant questions')
 _('click to see most relevant questions')
-_('relevance')
+_('by relevance')
 _('click to see the oldest questions')
-_('date')
+_('by date')
 _('click to see the newest questions')
 _('click to see the least recently updated questions')
-_('activity')
+_('by activity')
 _('click to see the most recently updated questions')
 _('click to see the least answered questions')
-_('answers')
+_('by answers')
 _('click to see the most answered questions')
 _('click to see least voted questions')
-_('votes')
+_('by votes')
 _('click to see most voted questions')
+_('interesting')
+_('ignored')
+_('subscribed')
+TAGS_ARE_REQUIRED_MESSAGE = _('tags are required')
+TAG_WRONG_CHARS_MESSAGE = _(
+    'please use letters, numbers and characters "-+.#"'
+)
 
 def get_i18n_message(key):
     messages = {
@@ -47,7 +54,4 @@ def get_i18n_message(key):
             'Please contact the forum administrator to reach a resolution.'
         )
     }
-    if key in messages:
-        return messages.get(key)
-    else:
-        raise KeyError(key)
+    return messages[key]

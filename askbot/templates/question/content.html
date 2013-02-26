@@ -1,0 +1,44 @@
+{% import "macros.html" as macros %}
+
+{% include "question/question_card.html" %}
+
+{% if answers %}
+    <div class="clean"></div>
+
+    {% include "question/answer_tab_bar.html" %}
+
+    <div class="clean"></div>
+    {{ macros.paginator(paginator_context, anchor='#sort-top') }}
+    <div class="clean"></div>
+
+    {% for answer in answers %}
+        {% if answers|length > 1 and loop.index == 2 %}
+            {{ settings.QUESTION_PAGE_ANSWER_BANNER|safe }}
+        {% endif %}
+        {% include "question/answer_card.html" %}
+    {% endfor %}
+
+    {{ macros.paginator(paginator_context, anchor='#sort-top') }}
+    <div class="clean"></div>
+{% else %}
+    {% include "question/sharing_prompt_phrase.html" %}
+{% endif %}
+
+{# buttons below cannot be cached yet #}
+{% if user_already_gave_answer %}
+    <a
+        class="submit"
+        href="{% url "edit_answer" previous_answer.id %}"
+    >{% trans %}Edit Your Previous Answer{% endtrans %}</a>
+    <span>{% trans %}(only one answer per question is allowed){% endtrans %}</span>
+{% else %}
+    {% include "question/new_answer_form.html" %}
+{% endif %}
+{% if question.closed == False and request.user == question.author %}{# this is outside the form on purpose #}
+<input 
+  type="button"
+  class="submit after-editor answer-own-question"
+  id="fmanswer_button"
+  value="{% trans %}Answer Your Own Question{% endtrans %}"
+/>
+{% endif %}

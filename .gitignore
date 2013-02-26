@@ -13,6 +13,7 @@ nbproject
 settings_local.py
 settings.py
 .idea
+.coverage
 *.iml
 lint
 env
@@ -47,3 +48,5 @@ run
 recaptcha
 /.ve
 /db.sq3
+*.DS_Store
+htmlcov

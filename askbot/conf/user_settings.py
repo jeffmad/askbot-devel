@@ -6,7 +6,7 @@ from askbot.conf.super_groups import LOGIN_USERS_COMMUNICATION
 from askbot.deps import livesettings
 from django.conf import settings as django_settings
 from askbot.skins import utils as skin_utils
-from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy as _
 from askbot import const
 
 USER_SETTINGS = livesettings.ConfigurationGroup(
@@ -14,6 +14,24 @@ USER_SETTINGS = livesettings.ConfigurationGroup(
                     _('User settings'),
                     super_group = LOGIN_USERS_COMMUNICATION
                 )
+
+settings.register(
+    livesettings.LongStringValue(
+        USER_SETTINGS,
+        'NEW_USER_GREETING',
+        default='',
+        description=_('On-screen greeting shown to the new users')
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        USER_SETTINGS,
+        'ALLOW_ANONYMOUS_FEEDBACK',
+        default=True,
+        description=_('Allow anonymous users send feedback')
+    )
+)
 
 settings.register(
     livesettings.BooleanValue(
@@ -27,9 +45,28 @@ settings.register(
 settings.register(
     livesettings.BooleanValue(
         USER_SETTINGS,
+        'AUTOFILL_USER_DATA',
+        default = True,
+        description = _('Auto-fill user name, email, etc on registration'),
+        help_text = _('Implemented only for LDAP logins at this point')
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        USER_SETTINGS,
         'EDITABLE_EMAIL',
         default = True,
         description = _('Allow users change own email addresses')
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        USER_SETTINGS,
+        'ALLOW_EMAIL_ADDRESS_IN_USERNAME',
+        default=True,
+        description=_('Allow email address in user name')
     )
 )
 
