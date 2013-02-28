@@ -11,20 +11,8 @@
         {% if settings.SHOW_LOGO %}
             {% include "widgets/logo.html" %}
         {% endif %}
-        <div id="solrNav">
-            <a id="solrSearchButton" href="#"></a>
-        </div>
         <div id="metaNav">
             {% include "widgets/meta_nav.html" %}
-        </div>
-        <div id="solrSearchForm" title="Search Ask using Solr">
-            <h2>Search</h2>
-            <form>
-                <fieldset>
-                    <label for="searchText">Search</label>
-                    <input type="text" name="searchText" id="searchText" class="text ui-widget-content ui-corner-all" />
-                </fieldset>
-            </form>
         </div>
         <div class="clean"></div>
     </div>

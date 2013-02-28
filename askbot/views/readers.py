@@ -43,14 +43,7 @@ from askbot.utils.decorators import anonymous_forbidden, ajax_only, get_only
 from askbot.search.state_manager import SearchState, DummySearchState
 from askbot.templatetags import extra_tags
 from askbot.conf import settings as askbot_settings
-<<<<<<< HEAD
-from askbot.skins.loaders import render_into_skin, get_template #jinja2 template loading enviroment
-from haystack.query import SearchQuerySet
-from askbot.models.question import Thread
- 
-=======
 from askbot.views import context
->>>>>>> upstream/master
 
 # used in index page
 #todo: - take these out of const or settings
