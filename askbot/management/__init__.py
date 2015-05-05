@@ -1,10 +1,8 @@
 import sys
 from django.core.management.base import NoArgsCommand
 from django.db import transaction
-from askbot.models import signals
+from askbot import signals
 from askbot.utils import console
-
-FORMAT_STRING = '%6.2f%%'#to print progress in percent
 
 class NoArgsJob(NoArgsCommand):
     """Base class for a job command -
@@ -55,7 +53,7 @@ class NoArgsJob(NoArgsCommand):
         afterwards there will be a short summary
         """
 
-        sys.stdout.write(batch['title'])
+        sys.stdout.write(batch['title'].encode('utf-8'))
         changed_count = 0
         checked_count = 0
         total_count = batch['query_set'].count()
@@ -74,8 +72,8 @@ class NoArgsJob(NoArgsCommand):
             checked_count += 1
 
             progress = 100*float(checked_count)/float(total_count)
-            console.print_progress(FORMAT_STRING, progress)
-        print FORMAT_STRING % 100
+            console.print_progress(checked_count, total_count)
+        console.print_progress(checked_count, total_count)
 
         if changed_count:
             print batch['changed_count_message'] % changed_count

@@ -3,6 +3,7 @@ this file is a candidate for publishing as an independent module
 """
 import re
 import sys
+from askbot.conf import settings as askbot_settings
 
 #Regexes for quote separators
 #add more via variables ending with _QUOTE_RE
@@ -13,21 +14,97 @@ import sys
 #expressions are stripped of month and day names
 #to keep them simpler and make the additions of language variants
 #easier.
-GMAIL_QUOTE_RE = r'\nOn [^\n]* wrote:\Z'
-GMAIL_SECOND_QUOTE_RE = r'\n\d{4}/\d{1,2}/\d{1,2} [^\n]*\Z'
-YAHOO_QUOTE_RE = r'\n_+\n\s*From: [^\n]+\nTo: [^\n]+\nSent: [^\n]+\nSubject: [^\n]+\Z'
-KMAIL_QUOTE_RE = r'\AOn [^\n]+ you wrote:\s*\n\n'
-OUTLOOK_RTF_QUOTE_RE = r'\nSubject: [^\n]+\nFrom: [^\n]+\nTo: [^\n]+\nDate: [^\n]+\Z'
-OUTLOOK_TEXT_QUOTE_RE = r'\n_+\Z'
+QUOTE_REGEXES = (
+    #GMAIL_QUOTE_RE = 
+    r'\nOn [^\n]* wrote:\Z',
+    #GMAIL_SECOND_QUOTE_RE = 
+    r'\n\d{4}/\d{1,2}/\d{1,2} [^\n]*\Z',
+    #BLACKBERRY
+    r'_+\nFrom:.*?\nSent:.*?\nTo:.*?\nSubject:.*?\Z',
+    #OUTLOOK1
+    r'\n-+[\w -]+\nFrom:.*?\nSent:.*?\nTo:.*?\nSubject:.*?\Z',
+    #unknown
+    r'\n-+[\w -]+\nFrom:.*?\nDate:.*?\nTo:.*?\nSubject:.*?\Z',
+    #YAHOO_QUOTE_RE = 
+    r'\n_+\n\s*From: [^\n]+\nTo: [^\n]+\nSent: [^\n]+\nSubject: [^\n]+\Z',
+    #KMAIL_QUOTE_RE = 
+    r'\AOn [^\n]+ you wrote:\s*\n\n',
+    #OUTLOOK_RTF_QUOTE_RE = 
+    r'\nSubject: [^\n]+\nFrom: [^\n]+\nTo: [^\n]+\nDate: [^\n]+\Z',
+    #OUTLOOK_TEXT_QUOTE_RE = 
+    r'\n_+\Z',
+    r'From:.*?\nSent:.*?\nTo:.*?\nSubject:.*?\Z',
+)
+
+
+# extra samples, separated with ####
+"""
+-----Original Message-----^M
+From: forum@example.com [mailto:forum@example.com] ^M
+Sent: Wednesday, August 07, 2013 11:00 AM^M
+To: Jane Doe^M
+Subject: "One more test question from email."^M
+
+##########
+
+________________________________
+ From: "nobody@example.com" <nobody@example.com>
+To: someone@rocketmail.com
+Sent: Wednesday, April 24, 2013 3:37 AM
+Subject: Welcome to Askbot
+
+##########
+
+On Wed, Jul 3, 2013 at 10:40 AM, <ask@example.org> wrote:
+
+> **
+>          Evgeny, please reply to this message.
+>
+> Your post could not be published, because we could not detect signature in
+> your email.
+> This happened either because this is your first post or you have changed
+> your email signature.
+> Please make a simple response, without editing this message.
+> We will then attempt to detect the signature in your response and you
+> should be able to post.
+>   ------------------------------
+>
+> Sincerely,
+> forum Administrator
+>
+> welcome-gofrnegwnwxgl9@example.org
+>
+
+
+
+--
+Askbot
+Valparaiso, Chile
+skype: aou aeu a u
+
+############
+Test from email
+
+From: ask@ask.example.org [mailto:ask@ask.example.org]
+Sent: Wednesday, July 03, 2013 10:41 AM
+To: John Doe 
+Subject: aou aoeu oau aoeu aou aoeu oeau
+
+############
+
+
+-------- Original message --------
+From: forum@ask.examle.org
+Date:12/15/2013 2:35 AM (GMT-05:00)
+To: John Doe 
+Subject: this is it
+
+"""
+
 
 def compile_quote_regexes():
-    regex_names = filter(
-        lambda v: v.endswith('_QUOTE_RE'),
-        globals().keys()
-    )
     compiled_regexes = list()
-    for regex_name in regex_names:
-        regex = globals()[regex_name]
+    for regex in QUOTE_REGEXES:
         compiled_regexes.append(
             re.compile(
                 regex,
@@ -44,6 +121,12 @@ def strip_trailing_empties_and_quotes(text):
 
 def strip_leading_empties(text):
     return re.sub(r'\A[\n\s\xa0]*', '', text)
+
+def strip_trailing_sender_references(text, email_address):
+    server_email = 'ask@' + askbot_settings.REPLY_BY_EMAIL_HOSTNAME
+    email_pattern = '(%s|%s)' % (email_address, server_email)
+    pattern = r'\n[^\n]*%s[^\n]*$' % email_pattern
+    return re.sub(pattern, '', text, re.IGNORECASE)
 
 def strip_email_client_quote_separator(text):
     """strips email client quote separator from the responses,

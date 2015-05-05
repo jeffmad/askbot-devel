@@ -9,7 +9,12 @@
             <ul>
                 {{ delete_avatar_form.as_ul() }}
             </ul>
-            <p><input type="submit" value="{% trans %}Delete These{% endtrans %}" /></p>
+            <p>
+                <input type="submit" value="{% trans %}Delete These{% endtrans %}" />
+                <a href="{{ user.get_profile_url() }}" class="button cancel"
+                    style="display: inline-block"
+                >{% trans %}Cancel{% endtrans %}</a>
+            </p>
         </form>
     {% endif %}
 {% endblock %}

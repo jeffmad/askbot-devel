@@ -13,12 +13,7 @@
     </h2>
     {% endspaceless %}
     <div class="user-stats-table">
-        <table class="tags">
-            <tr>
-                <td valign="top">
-                {{ macros.tag_list_widget(tag_names, deletable = False) }}
-                </td>
-            </tr>
-        </table>
+        {{ macros.tag_list_widget(tag_names, deletable = False) }}
+        <div class="clearfix"></div>
     </div>
 {% endmacro %}

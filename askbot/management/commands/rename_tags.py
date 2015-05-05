@@ -4,8 +4,10 @@ retagged
 """
 import sys
 from optparse import make_option
+from django.conf import settings as django_settings
 from django.core import management
 from django.core.management.base import BaseCommand, CommandError
+from django.utils import translation
 from askbot import api, models
 from askbot.utils import console
 
@@ -81,6 +83,14 @@ ask you to confirm your action before making changes.
             default = None,
             help = 'id of the user who will be marked as a performer of this operation'
         ),
+        make_option('--lang',
+            action = 'store',
+            type = 'str',
+            dest = 'lang',
+            default = django_settings.LANGUAGE_CODE,
+            help = 'language code for the tags to rename e.g. "en"'
+        ),
+
     )
 
     #@transaction.commit_manually
@@ -94,6 +104,7 @@ ask you to confirm your action before making changes.
 
         The data of tag id's is then delegated to the command "rename_tag_id"
         """
+        translation.activate(django_settings.LANGUAGE_CODE)
         if options['from'] is None:
             raise CommandError('the --from argument is required')
         if options['to'] is None:
@@ -113,7 +124,11 @@ ask you to confirm your action before making changes.
         from_tags = list()
         try:
             for tag_name in from_tag_names:
-                from_tags.append(models.Tag.objects.get(name = tag_name))
+                tag = models.Tag.objects.get(
+                                    name=tag_name,
+                                    language_code=options['lang']
+                                )
+                from_tags.append(tag)
         except models.Tag.DoesNotExist:
             error_message = u"""tag %s was not found. It is possible that the tag
 exists but we were not able to match it's unicode value
@@ -124,19 +139,24 @@ Also, you can try command "rename_tag_id"
 """ % tag_name
             raise CommandError(error_message)
         except models.Tag.MultipleObjectsReturned:
-            raise CommandError(u'found more than one tag named %s' % from_tag_name)
+            raise CommandError(u'found more than one tag named %s' % tag_name)
 
         admin = get_admin(seed_user_id = options['user_id'])
 
         to_tags = list()
         for tag_name in to_tag_names:
             try:
-                to_tags.append(models.Tag.objects.get(name = tag_name))
+                tag = models.Tag.objects.get(
+                                    name=tag_name,
+                                    language_code=options['lang']
+                                )
+                to_tags.append(tag)
             except models.Tag.DoesNotExist:
                 to_tags.append(
                     models.Tag.objects.create(
-                                name = tag_name,
-                                created_by = admin
+                                name=tag_name,
+                                created_by=admin,
+                                language_code=options['lang']
                     )
                 )
             except models.Tag.MultipleObjectsReturned:

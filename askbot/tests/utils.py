@@ -1,8 +1,10 @@
 """utility functions used by Askbot test cases
 """
+from django.core.cache import cache
 from django.test import TestCase
 from functools import wraps
 from askbot import models
+from askbot import signals
 
 def with_settings(**settings_dict):
     """a decorator that will run function with settings
@@ -71,7 +73,6 @@ def create_user(
     if date_joined is not None:
         user.date_joined = date_joined
         user.save()
-    user.set_status(status)
     if notification_schedule == None:
         notification_schedule = models.EmailFeedSetting.NO_EMAIL_SCHEDULE
 
@@ -86,6 +87,10 @@ def create_user(
                         subscriber = user
                     )
         feed.save()
+
+    signals.user_registered.send(None, user=user)
+    user.set_status(status)
+
     return user
 
 
@@ -94,13 +99,18 @@ class AskbotTestCase(TestCase):
     to django TestCase class
     """
 
+    @classmethod
+    def setUpClass(cls):
+        cache.clear()
+
     def create_user(
                 self,
-                username = 'user',
-                email = None,
-                notification_schedule = None,
-                date_joined = None,
-                status = 'a'
+                username='user',
+                email=None,
+                notification_schedule=None,
+                date_joined=None,
+                reputation=1,
+                status='a'
             ):
         """creates user with username, etc and
         makes the result accessible as
@@ -116,11 +126,12 @@ class AskbotTestCase(TestCase):
             email = username + '@example.com'
 
         user_object = create_user(
-                    username = username,
-                    email = email,
-                    notification_schedule = notification_schedule,
-                    date_joined = date_joined,
-                    status = status
+                    username=username,
+                    email=email,
+                    notification_schedule=notification_schedule,
+                    date_joined=date_joined,
+                    status=status,
+                    reputation=reputation
                 )
 
         setattr(self, username, user_object)
@@ -149,17 +160,17 @@ class AskbotTestCase(TestCase):
 
     def post_question(
                     self,
-                    user = None,
-                    title = 'test question title',
-                    body_text = 'test question body text',
-                    tags = 'test',
-                    by_email = False,
-                    wiki = False,
-                    is_anonymous = False,
-                    is_private = False,
-                    group_id = None,
-                    follow = False,
-                    timestamp = None,
+                    user=None,
+                    title='test question title',
+                    body_text='test question body text',
+                    tags='test',
+                    by_email=False,
+                    wiki=False,
+                    is_anonymous=False,
+                    is_private=False,
+                    group_id=None,
+                    follow=False,
+                    timestamp=None,
                 ):
         """posts and returns question on behalf
         of user. If user is not given, it will be self.user
@@ -279,7 +290,7 @@ class AskbotTestCase(TestCase):
             except models.User.DoesNotExist:
                 user = self.create_user('tag_creator')
 
-        tag = models.Tag(created_by = user, name = tag_name)
+        tag = models.Tag(created_by=user, name=tag_name, language_code='en')
         tag.save()
         return tag
 

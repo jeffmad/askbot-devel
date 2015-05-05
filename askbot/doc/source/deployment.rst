@@ -83,7 +83,7 @@ Settings below are not perfect but may be a good starting point::
 
          #aliases to serve static media directly
          #will probably need adjustment
-         Alias /static/ /path/to/django-project/static/
+         Alias /m/ /path/to/django-project/static/
          Alias /upfiles/ /path/to/django-project/askbot/upfiles/
          <DirectoryMatch "/path/to/django-project/askbot/skins/([^/]+)/media">
             Order deny,allow

@@ -16,13 +16,14 @@ from django.contrib.syndication.views import Feed
 
 import itertools
 
-from django.contrib.contenttypes.models import ContentType
+from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext as _
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
 
-from askbot.models import Post
 from askbot.conf import settings as askbot_settings
+from askbot.models import Post
+from askbot.utils.html import site_url
 
 class RssIndividualQuestionFeed(Feed):
     """rss feed class for particular questions
@@ -30,7 +31,7 @@ class RssIndividualQuestionFeed(Feed):
 
     def title(self):
         return askbot_settings.APP_TITLE + _(' - ') + \
-                _('Individual question feed')
+                _('Individual %(question)s feed') % {'question': askbot_settings.WORDS_QUESTION_SINGULAR}
 
     def feed_copyright(self):
         return askbot_settings.APP_COPYRIGHT
@@ -48,10 +49,10 @@ class RssIndividualQuestionFeed(Feed):
     def item_link(self, item):
         """get full url to the item
         """
-        return askbot_settings.APP_URL + item.get_absolute_url()
+        return site_url(item.get_absolute_url())
 
     def link(self):
-        return askbot_settings.APP_URL
+        return site_url(reverse('questions'))
 
     def item_pubdate(self, item):
         """get date of creation for the item
@@ -83,13 +84,12 @@ class RssIndividualQuestionFeed(Feed):
     def item_title(self, item):
         """returns the title for the item
         """
-        title = item
         if item.post_type == "question":
-            self.title = item
+            title = item.thread.title
         elif item.post_type == "answer":
-            title = "Answer by %s for %s " % (item.author, self.title)
+            title = u'Answer by %s for %s ' % (item.author, item.thread._question_post().summary)
         elif item.post_type == "comment":
-            title = "Comment by %s for %s" % (item.author, self.title)
+            title = u'Comment by %s for %s' % (item.author, item.parent.summary)
         return title
 
     def item_description(self, item):
@@ -104,7 +104,7 @@ class RssLastestQuestionsFeed(Feed):
 
     def title(self):
         return askbot_settings.APP_TITLE + _(' - ') + \
-                _('Individual question feed')
+                _('Latest %(question)s feed') % {'question': askbot_settings.WORDS_QUESTION_SINGULAR}
 
     def feed_copyright(self):
         return askbot_settings.APP_COPYRIGHT
@@ -115,10 +115,10 @@ class RssLastestQuestionsFeed(Feed):
     def item_link(self, item):
         """get full url to the item
         """
-        return askbot_settings.APP_URL + item.get_absolute_url()
+        return site_url(item.get_absolute_url())
 
     def link(self):
-        return askbot_settings.APP_URL
+        return site_url(reverse('questions'))
 
     def item_author_name(self, item):
         """get name of author
@@ -128,7 +128,7 @@ class RssLastestQuestionsFeed(Feed):
     def item_author_link(self, item):
         """get url of the author's profile
         """
-        return askbot_settings.APP_URL + item.author.get_profile_url()
+        return site_url(item.author.get_profile_url())
 
     def item_pubdate(self, item):
         """get date of creation for the item
@@ -139,7 +139,10 @@ class RssLastestQuestionsFeed(Feed):
         """returns url without the slug
         because the slug can change
         """
-        return self.link() + item.get_absolute_url(no_slug = True)
+        return site_url(item.get_absolute_url(no_slug = True))
+
+    def item_title(self, item):
+        return item.thread.title
 
     def item_description(self, item):
         """returns the description for the item
@@ -175,11 +178,3 @@ class RssLastestQuestionsFeed(Feed):
     def get_feed(self, obj, request):
         self.request = request
         return super(RssLastestQuestionsFeed, self).get_feed(obj, request)
-
-def main():
-    """main function for use as a script
-    """
-    pass
-
-if __name__ == '__main__':
-    main()

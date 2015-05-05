@@ -13,7 +13,7 @@ from askbot.deps.django_authopenid import util
 from askbot.deps.django_authopenid.ldap_auth import ldap_authenticate
 from askbot.deps.django_authopenid.ldap_auth import ldap_create_user
 from askbot.conf import settings as askbot_settings
-from askbot.models.signals import user_registered
+from askbot.signals import user_registered
 
 LOG = logging.getLogger(__name__)
 from django.conf import settings
@@ -226,6 +226,7 @@ class AuthBackend(object):
                 provider_name = None,#required with all except email_key
                 openid_url = None,
                 email_key = None,
+                email = None, # used with mozilla-persona method
                 oauth_user_id = None,#used with oauth
                 facebook_user_id = None,#user with facebook
                 wordpress_url = None, # required for self hosted wordpress
@@ -318,7 +319,20 @@ class AuthBackend(object):
                     'duplicate openid url in the database!!! %s' % openid_url
                 )
                 return None
-                
+
+        elif method == 'mozilla-persona':
+            try:
+                assoc = UserAssociation.objects.get(
+                                        openid_url=email,
+                                        provider_name='mozilla-persona'
+                                    )
+                return assoc.user
+            except UserAssociation.DoesNotExist:
+                return None
+            except UserAssociation.MultipleObjectsReturned:
+                logging.critical(
+                    'duplicate user with mozilla persona %s!!!' % email
+                )
 
         elif method == 'email':
             #with this method we do no use user association
@@ -332,6 +346,24 @@ class AuthBackend(object):
                 return user
             except User.DoesNotExist:
                 return None
+
+        elif method == 'valid_email':
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return None
+            except User.MultipleObjectsReturned:
+                LOG.critical(
+                    ('have more than one user with email %s ' +
+                    'he/she will not be able to authenticate with ' +
+                    'the email address in the place of user name') % email_address
+                )
+                return None
+
+            if user.email_isvalid == False:
+                return None
+
+            return user
 
         elif method == 'oauth':
             if login_providers[provider_name]['type'] in ('oauth', 'oauth2'):

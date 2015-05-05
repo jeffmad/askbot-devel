@@ -3,6 +3,7 @@ functions that happen on behalf of users
 
 e.g. ``some_user.do_something(...)``
 """
+from bs4 import BeautifulSoup
 from django.core import exceptions
 from django.core.urlresolvers import reverse
 from django.test.client import Client
@@ -198,10 +199,10 @@ class DBApiTests(AskbotTestCase):
     def test_retag_tags_too_long_raises(self):
         tags = "aoaoesuouooeueooeuoaeuoeou aostoeuoaethoeastn oasoeoa nuhoasut oaeeots aoshootuheotuoehao asaoetoeatuoasu o  aoeuethut aoaoe uou uoetu uouuou ao aouosutoeh"
         question = self.post_question(user=self.user)
-        self.assertRaises(
-            exceptions.ValidationError,
-            self.user.retag_question,
-            question=question, tags=tags
+        self.user.retag_question(question=question, tags=tags)
+        self.assertEqual(
+            set(question.thread.tagnames.split()),
+            set('aoaoesuouooeueooeuoaeuoeou aostoeuoaethoeastn oasoeoa nuhoasut oaeeots aoshootuheotuoehao asaoetoeatuoasu o aoeuethut aoaoe'.split())
         )
 
     def test_search_with_apostrophe_works(self):
@@ -513,9 +514,14 @@ class GroupTests(AskbotTestCase):
         self.assertEqual(qa.groups.filter(name='private').exists(), True)
 
     def test_global_group_name_setting_changes_group_name(self):
+        orig_group_name = askbot_settings.GLOBAL_GROUP_NAME;
         askbot_settings.update('GLOBAL_GROUP_NAME', 'all-people')
         group = models.Group.objects.get_global_group()
         self.assertEqual(group.name, 'all-people')
+        # Revert the global group name, so we don't mess up other tests!
+        askbot_settings.update('GLOBAL_GROUP_NAME', orig_group_name);
+        group = models.Group.objects.get_global_group()
+        self.assertEqual(group.name, orig_group_name)
 
     def test_ask_global_group_by_id_works(self):
         group = models.Group.objects.get_global_group()
@@ -643,6 +649,21 @@ class GroupTests(AskbotTestCase):
         found_count = self.u1.get_groups().filter(name='somegroup').count()
         self.assertEqual(found_count, 1)
 
+        #closed group
+        closed_group = models.Group(name="secretgroup")
+        closed_group.openness = models.Group.CLOSED
+        closed_group.save()
+
+        #join (should raise exception)
+        self.assertRaises(exceptions.PermissionDenied,
+                          self.u1.join_group, closed_group)
+        #testing force parameter
+        self.u1.join_group(closed_group, force=True)
+
+        #assert membership of askbot group object
+        found_count = self.u1.get_groups().filter(name='secretgroup').count()
+        self.assertEqual(found_count, 1)
+
     def test_group_moderation(self):
         #create group
         group = models.Group(name='somegroup')
@@ -667,3 +688,46 @@ class GroupTests(AskbotTestCase):
         self.assertEqual(acts[0].recipients.count(), 1)
         recipient = acts[0].recipients.all()[0]
         self.assertEqual(recipient, mod)
+
+class LinkPostingTests(AskbotTestCase):
+
+    def assert_no_link(self, html):
+        soup = BeautifulSoup(html)
+        links = soup.findAll('a')
+        self.assertEqual(len(links), 0)
+
+    def assert_has_link(self, html, url):
+        soup = BeautifulSoup(html)
+        links = soup.findAll('a')
+        self.assertTrue(len(links) > 0)
+        self.assertEqual(links[0]['href'], url)
+
+    @with_settings(
+        EDITOR_TYPE='markdown',
+        MIN_REP_TO_SUGGEST_LINK=5,
+        MIN_REP_TO_INSERT_LINK=30
+    )
+    def test_admin_can_help_low_rep_user_insert_link(self):
+        #create a low rep user
+        low = self.create_user('low', reputation=10)
+        #create an admin
+        admin = self.create_user('admin', status='d')
+        #low re user posts a question with a link
+        text = 'hello, please read http://wikipedia.org'
+        question = self.post_question(user=low, body_text=text)
+        self.assert_no_link(question.html)
+        self.edit_question(user=admin, question=question, body_text=text + ' ok')
+        self.assert_has_link(question.html, 'http://wikipedia.org')
+
+
+class ForbiddenTextPostingTests(AskbotTestCase):
+    @with_settings(
+        FORBIDDEN_PHRASES='bad\tstuff'
+    )
+    def test_spam_question_fails(self):
+        user = self.create_user()
+        self.assertRaises(
+            ValueError,
+            self.post_question,
+            body_text='there is bad\n stuff'
+        )

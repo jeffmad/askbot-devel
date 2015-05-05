@@ -6,6 +6,8 @@ from askbot.deps.livesettings import ConfigurationGroup
 from askbot.deps.livesettings import values
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings as django_settings
+from django.core.validators import URLValidator
+from django.core.exceptions import ValidationError
 from askbot.skins import utils as skin_utils
 from askbot import const
 from askbot.conf.super_groups import CONTENT_AND_UI
@@ -16,11 +18,37 @@ GENERAL_SKIN_SETTINGS = ConfigurationGroup(
                     super_group = CONTENT_AND_UI
                 )
 
+def logo_destination_callback(old_url, new_url):
+    url = new_url.strip()
+    if url == '':
+        return ''
+
+    if url.startswith('/'):
+        return url
+
+    validate = URLValidator()
+    try:
+        validate(url)
+        return url
+    except ValidationError:
+        raise ValueError(_('Please enter a valid url'))
+
+settings.register(
+    values.StringValue(
+        GENERAL_SKIN_SETTINGS,
+        'LOGO_DESTINATION_URL',
+        default = '',
+        description = _('Custom destination URL for the logo'),
+        update_callback=logo_destination_callback
+    )
+)
+
+
 settings.register(
     values.ImageValue(
         GENERAL_SKIN_SETTINGS,
         'SITE_LOGO_URL',
-        description = _('Q&A site logo'),
+        description = _('Q&amp;A site logo'),
         help_text = _(
                         'To change the logo, select new file, '
                         'then submit this whole form.'
@@ -30,41 +58,18 @@ settings.register(
     )
 )
 
-LANGUAGE_CHOICES = (
-            ('en', _("English")),
-            ('es', _("Spanish")),
-            ('ca', _("Catalan")),
-            ('de', _("German")),
-            ('el', _("Greek")),
-            ('fi', _("Finnish")),
-            ('fr', _("French")),
-            ('hi', _("Hindi")),
-            ('hu', _("Hungarian")),
-            ('it', _("Italian")),
-            ('ja', _("Japanese")),
-            ('ko', _("Korean")),
-            ('pt', _("Portuguese")),
-            ('pt_BR', _("Brazilian Portuguese")),
-            ('ro', _("Romanian")),
-            ('ru', _("Russian")),
-            ('sr', _("Serbian")),
-            ('tr', _("Turkish")),
-            ('vi', _("Vietnamese")),
-            ('zh_CN', _("Chinese")),
-            ('zh_TW', _("Chinese (Taiwan)")),
+#cannot use HAS_ASKBOT_LOCALE_MIDDLEWARE due to circular import error
+if not getattr(django_settings, 'ASKBOT_MULTILINGUAL', False) and \
+        'askbot.middleware.locale.LocaleMiddleware' in django_settings.MIDDLEWARE_CLASSES:
+    settings.register(
+        values.StringValue(
+            GENERAL_SKIN_SETTINGS,
+            'ASKBOT_LANGUAGE',
+            default = django_settings.LANGUAGE_CODE,
+            choices =  django_settings.LANGUAGES,
+            description = _('Select Language'),
         )
-
-"""
-settings.register(
-    values.StringValue(
-        GENERAL_SKIN_SETTINGS,
-        'ASKBOT_LANGUAGE',
-        default = 'en',
-        choices =  LANGUAGE_CHOICES,
-        description = _('Select Language'),
     )
-)
-"""
 
 settings.register(
     values.BooleanValue(

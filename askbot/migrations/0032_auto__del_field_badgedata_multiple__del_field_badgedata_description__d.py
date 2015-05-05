@@ -9,13 +9,14 @@ class Migration(SchemaMigration):
     def forwards(self, orm):
 
         # Removing unique constraint on 'BadgeData', fields ['type', 'name']
-        #db.delete_unique('askbot_badgedata', ['type', 'name'])
+        db.delete_unique('askbot_badgedata', ['type', 'name'])
 
         # Deleting field 'BadgeData.multiple'
         db.delete_column('askbot_badgedata', 'multiple')
 
         # Deleting field 'BadgeData.description'
         db.delete_column('askbot_badgedata', 'description')
+
 
         # Deleting field 'BadgeData.type'
         db.delete_column('askbot_badgedata', 'type')
@@ -25,8 +26,8 @@ class Migration(SchemaMigration):
 
         # Changing field 'BadgeData.slug'
         db.alter_column('askbot_badgedata', 'slug', self.gf('django.db.models.fields.SlugField')(unique=True, max_length=50))
-
         # Adding unique constraint on 'BadgeData', fields ['slug']
+        return
         try:#work around the South 0.7.3 bug
             db.start_transaction()
             db.create_unique('askbot_badgedata', ['slug'])

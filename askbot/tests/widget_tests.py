@@ -4,12 +4,15 @@ from askbot import models
 from askbot.tests.utils import AskbotTestCase
 
 from django.test.client import Client
+from django.conf import settings as django_settings
 from django.core.urlresolvers import reverse
+from django.utils import translation
 
 
 class WidgetViewsTests(AskbotTestCase):
 
     def setUp(self):
+        translation.activate(django_settings.LANGUAGE_CODE)
         self.client = Client()
         self.widget = models.AskWidget.objects.create(title='foo widget')
         self.user = self.create_user('user1')
@@ -74,6 +77,7 @@ class WidgetLoginViewTest(AskbotTestCase):
 class WidgetCreatorViewsTests(AskbotTestCase):
 
     def setUp(self):
+        translation.activate(django_settings.LANGUAGE_CODE)
         self.client = Client()
         self.user = self.create_user('user1')
         self.user.set_password('testpass')
@@ -136,6 +140,7 @@ class WidgetCreatorViewsTests(AskbotTestCase):
 class QuestionWidgetViewsTests(AskbotTestCase):
 
     def setUp(self):
+        translation.activate(django_settings.LANGUAGE_CODE)
         self.user = self.create_user('testuser')
         self.client = Client()
         self.widget =  models.QuestionWidget.objects.create(title="foo",

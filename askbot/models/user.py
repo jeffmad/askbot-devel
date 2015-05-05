@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.models import Group as AuthGroup
 from django.core import exceptions
 from django.forms import EmailField, URLField
+from django.utils import translation
 from django.utils.translation import ugettext as _
 from django.utils.translation import ugettext_lazy
 from django.utils.html import strip_tags
@@ -16,13 +17,44 @@ from askbot import const
 from askbot.conf import settings as askbot_settings
 from askbot.utils import functions
 from askbot.models.base import BaseQuerySetManager
-from askbot.models.tag import Tag
-from askbot.models.tag import clean_group_name#todo - delete this
-from askbot.models.tag import get_tags_by_names
-from askbot.forms import DomainNameField
-from askbot.utils.forms import email_is_allowed
+from collections import defaultdict
 
 PERSONAL_GROUP_NAME_PREFIX = '_personal_'
+
+class MockUser(object):
+    def __init__(self):
+        self.username = ''
+
+    def get_avatar_url(self, size):
+        return ''
+
+    def get_profile_url(self):
+        return ''
+
+    def get_absolute_url(self):
+        return ''
+
+    def is_anonymous(self):
+        return True
+
+    def is_authenticated(self):
+        return False
+
+    def is_administrator_or_moderator(self):
+        return False
+
+    def is_blocked(self):
+        return False
+
+    def is_approved(self):
+        return False
+
+    def is_suspended(self):
+        return False
+
+    def is_watched(self):
+        return False
+
 
 class ResponseAndMentionActivityManager(models.Manager):
     def get_query_set(self):
@@ -35,7 +67,8 @@ class ResponseAndMentionActivityManager(models.Manager):
                     activity_type__in = response_types
                 )
 
-class ActivityManager(models.Manager):
+class ActivityQuerySet(models.query.QuerySet):
+    """query set for the `Activity` model"""
     def get_all_origin_posts(self):
         #todo: redo this with query sets
         origin_posts = set()
@@ -49,6 +82,36 @@ class ActivityManager(models.Manager):
                             % unicode(post)
                         )
         return list(origin_posts)
+
+    def fetch_content_objects_dict(self):
+        """return a dictionary where keys are activity ids
+        and values - content objects"""
+        content_object_ids = defaultdict(list)# lists of c.object ids by c.types
+        activity_type_ids = dict()#links c.objects back to activity objects
+        for act in self:
+            content_type_id = act.content_type_id
+            object_id = act.object_id
+            content_object_ids[content_type_id].append(object_id)
+            activity_type_ids[(content_type_id, object_id)] = act.id
+
+        #3) get links from activity objects to content objects
+        objects_by_activity = dict()
+        for content_type_id, object_id_list in content_object_ids.items():
+            content_type = ContentType.objects.get_for_id(content_type_id)
+            model_class = content_type.model_class()
+            content_objects = model_class.objects.filter(id__in=object_id_list)
+            for content_object in content_objects:
+                key = (content_type_id, content_object.id)
+                activity_id = activity_type_ids[key]
+                objects_by_activity[activity_id] = content_object
+
+        return objects_by_activity
+
+
+class ActivityManager(BaseQuerySetManager):
+    """manager class for the `Activity` model"""
+    def get_query_set(self):
+        return ActivityQuerySet(self.model)
 
     def create_new_mention(
                 self,
@@ -280,6 +343,7 @@ class EmailFeedSetting(models.Model):
         'q_sel': 'i',
         'm_and_c': 'i'
     }
+    #todo: words
     FEED_TYPE_CHOICES = (
                     ('q_all', ugettext_lazy('Entire forum')),
                     ('q_ask', ugettext_lazy('Questions that I asked')),
@@ -311,13 +375,15 @@ class EmailFeedSetting(models.Model):
         unique_together = ('subscriber', 'feed_type')
         app_label = 'askbot'
 
-
     def __str__(self):
+        return unicode(self).encode('utf-8')
+
+    def __unicode__(self):
         if self.reported_at is None:
             reported_at = "'not yet'"
         else:
             reported_at = '%s' % self.reported_at.strftime('%d/%m/%y %H:%M')
-        return 'Email feed for %s type=%s, frequency=%s, reported_at=%s' % (
+        return u'Email feed for %s type=%s, frequency=%s, reported_at=%s' % (
                                                      self.subscriber,
                                                      self.feed_type,
                                                      self.frequency,
@@ -365,6 +431,21 @@ class AuthUserGroups(models.Model):
         managed = False
 
 
+class GroupMembershipManager(models.Manager):
+    def create(self, **kwargs):
+        user = kwargs['user']
+        group = kwargs['group']
+        try:
+            #need this for the cases where auth User_groups is there,
+            #but ours is not
+            auth_gm = AuthUserGroups.objects.get(user=user, group=group)
+            #use this as link for the One to One relation
+            kwargs['authusergroups_ptr'] = auth_gm
+        except AuthUserGroups.DoesNotExist:
+            pass
+        super(GroupMembershipManager, self).create(**kwargs)
+
+
 class GroupMembership(AuthUserGroups):
     """contains one-to-one relation to ``auth_user_group``
     and extra membership profile fields"""
@@ -382,6 +463,8 @@ class GroupMembership(AuthUserGroups):
                         default=FULL,
                         choices=LEVEL_CHOICES,
                     )
+
+    objects = GroupMembershipManager()
 
 
     class Meta:
@@ -418,9 +501,10 @@ class GroupQuerySet(models.query.QuerySet):
                         user=user
                     ).exclude(id=global_group.id)
         else:
-            return self.filter(user = user)
+            return self.filter(user=user)
 
     def get_by_name(self, group_name = None):
+        from askbot.models.tag import clean_group_name#todo - delete this
         return self.get(name = clean_group_name(group_name))
 
 
@@ -501,7 +585,11 @@ class Group(AuthGroup):
                             null = True, blank = True, default = ''
                         )
 
-    is_vip = models.BooleanField(default=False)
+    is_vip = models.BooleanField(
+        default=False,
+        help_text='Check to make members of this group site moderators'
+    )
+    read_only = models.BooleanField(default=False)
 
     objects = GroupManager()
 
@@ -551,6 +639,7 @@ class Group(AuthGroup):
             return 'open'
 
         #relying on a specific method of storage
+        from askbot.utils.forms import email_is_allowed
         if email_is_allowed(
             user.email,
             allowed_emails=self.preapproved_emails,
@@ -581,6 +670,7 @@ class Group(AuthGroup):
         self.preapproved_emails = ' ' + '\n'.join(emails) + ' '
 
         domains = functions.split_list(self.preapproved_email_domains)
+        from askbot.forms import DomainNameField
         domain_field = DomainNameField()
         try:
             map(lambda v: domain_field.clean(v), domains)
@@ -597,9 +687,13 @@ class Group(AuthGroup):
 class BulkTagSubscriptionManager(BaseQuerySetManager):
 
     def create(
-                self, tag_names=None,
-                user_list=None, group_list=None,
-                tag_author=None,  **kwargs
+                self,
+                tag_names=None,
+                user_list=None, 
+                group_list=None,
+                tag_author=None,
+                language_code=None,
+                **kwargs
             ):
 
         tag_names = tag_names or []
@@ -610,17 +704,20 @@ class BulkTagSubscriptionManager(BaseQuerySetManager):
         tag_name_list = []
 
         if tag_names:
-            tags, new_tag_names = get_tags_by_names(tag_names)
+            from askbot.models.tag import get_tags_by_names
+            tags, new_tag_names = get_tags_by_names(tag_names, language_code)
             if new_tag_names:
                 assert(tag_author)
 
             tags_id_list= [tag.id for tag in tags]
             tag_name_list = [tag.name for tag in tags]
 
+            from askbot.models.tag import Tag
             new_tags = Tag.objects.create_in_bulk(
-                                        tag_names=new_tag_names,
-                                        user=tag_author
-                                    )
+                                tag_names=new_tag_names,
+                                user=tag_author,
+                                language_code=translation.get_language()
+                            )
 
             tags_id_list.extend([tag.id for tag in new_tags])
             tag_name_list.extend([tag.name for tag in new_tags])
@@ -649,7 +746,7 @@ class BulkTagSubscriptionManager(BaseQuerySetManager):
 
 class BulkTagSubscription(models.Model):
     date_added = models.DateField(auto_now_add=True)
-    tags = models.ManyToManyField(Tag)
+    tags = models.ManyToManyField('Tag')
     users = models.ManyToManyField(User)
     groups = models.ManyToManyField(Group)
 

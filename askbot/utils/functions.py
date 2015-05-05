@@ -1,8 +1,32 @@
+import datetime
 import re
 import random
-import datetime
+import time
 from django.utils.translation import ugettext as _
 from django.utils.translation import ungettext
+from django.utils.html import escape
+from django.utils import six
+from django.utils.functional import lazy
+from django.utils.safestring import mark_safe
+
+
+mark_safe_lazy = lazy(mark_safe, six.text_type)
+
+
+def timedelta_total_seconds(td):
+    """returns total seconds for the timedelta object
+    supports python < 2.7
+    """
+    if hasattr(td, 'total_seconds'):
+        return td.total_seconds()
+    from future import __division__
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+
+
+def get_epoch_str(dt):
+    """returns epoch as string to datetime"""
+    return str(int(time.mktime(dt.timetuple())))
+
 
 def get_from_dict_or_object(source, key):
     try:
@@ -17,6 +41,14 @@ def enumerate_string_list(strings):
     """
     numbered_strings = enumerate(strings, start = 1)
     return [ '%d) %s' % item for item in numbered_strings ]
+
+
+def format_setting_name(token):
+    token = token.replace(' ', '_')
+    token = token.replace('-', '_')
+    bits = token.split('_')
+    return '_'.join(bits).upper()
+
 
 def pad_string(text):
     """Inserts one space between words,
@@ -37,6 +69,13 @@ def split_list(text):
     """
     text = text.replace(',', ' ').replace(';', ' ')
     return text.strip().split()
+
+def split_phrases(text):
+    """splits text by semicolon (;), comma(,) and 
+    end of line
+    """
+    text = text.replace(';', ',').replace('\n', ',')
+    return map(lambda v: v.strip(), text.split(','))
 
 def is_iterable(thing):
     if hasattr(thing, '__iter__'):
@@ -132,27 +171,39 @@ def setup_paginator(context):
         if (context["pages"] <= LEADING_PAGE_RANGE_DISPLAYED):
             in_leading_range = in_trailing_range = True
             page_numbers = [n for n in range(1, context["pages"] + 1) if n > 0 and n <= context["pages"]]
-        elif (context["page"] <= LEADING_PAGE_RANGE):
+        elif (context["current_page_number"] <= LEADING_PAGE_RANGE):
             in_leading_range = True
             page_numbers = [n for n in range(1, LEADING_PAGE_RANGE_DISPLAYED + 1) if n > 0 and n <= context["pages"]]
             pages_outside_leading_range = [n + context["pages"] for n in range(0, -NUM_PAGES_OUTSIDE_RANGE, -1)]
-        elif (context["page"] > context["pages"] - TRAILING_PAGE_RANGE):
+        elif (context["current_page_number"] > context["pages"] - TRAILING_PAGE_RANGE):
             in_trailing_range = True
             page_numbers = [n for n in range(context["pages"] - TRAILING_PAGE_RANGE_DISPLAYED + 1, context["pages"] + 1) if n > 0 and n <= context["pages"]]
             pages_outside_trailing_range = [n + 1 for n in range(0, NUM_PAGES_OUTSIDE_RANGE)]
         else:
-            page_numbers = [n for n in range(context["page"] - ADJACENT_PAGES, context["page"] + ADJACENT_PAGES + 1) if n > 0 and n <= context["pages"]]
+            page_numbers = [n for n in range(context["current_page_number"] - ADJACENT_PAGES, context["current_page_number"] + ADJACENT_PAGES + 1) if n > 0 and n <= context["pages"]]
             pages_outside_leading_range = [n + context["pages"] for n in range(0, -NUM_PAGES_OUTSIDE_RANGE, -1)]
             pages_outside_trailing_range = [n + 1 for n in range(0, NUM_PAGES_OUTSIDE_RANGE)]
 
+        page_object = context['page_object']
+        #patch for change in django 1.5
+        if page_object.has_previous():
+            previous_page_number = page_object.previous_page_number()
+        else:
+            previous_page_number = None
+
+        if page_object.has_next():
+            next_page_number = page_object.next_page_number()
+        else:
+            next_page_number = None
+
         return {
-            "base_url": context["base_url"],
+            "base_url": escape(context["base_url"]),
             "is_paginated": context["is_paginated"],
-            "previous": context["previous"],
-            "has_previous": context["has_previous"],
-            "next": context["next"],
-            "has_next": context["has_next"],
-            "page": context["page"],
+            "previous": previous_page_number,
+            "has_previous": page_object.has_previous(),
+            "next": next_page_number,
+            "has_next": page_object.has_next(),
+            "page": context["current_page_number"],
             "pages": context["pages"],
             "page_numbers": page_numbers,
             "in_leading_range" : in_leading_range,

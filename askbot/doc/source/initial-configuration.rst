@@ -27,6 +27,14 @@ and answering the questions. The `askbot-setup` script will ask you where to dep
 the directory where the Askbot project resides, you can answer `.` (`.` refers to the current directory).
 There may be an error message; ignore it.
 
+After that - run command `collectstatic` - in order to place all the static files (.css and .js)
+into one directory::
+
+    python manage.py collectstatic
+
+Remember to repeat this command any time you upgrade Askbot or other apps installed
+in the same project.
+
 .. note::
 
     All Django sites have four project-wide files::

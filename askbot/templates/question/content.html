@@ -8,37 +8,58 @@
     {% include "question/answer_tab_bar.html" %}
 
     <div class="clean"></div>
-    {{ macros.paginator(paginator_context, anchor='#sort-top') }}
+    <div class="pager">
+        {{ macros.paginator(paginator_context, anchor='#sort-top') }}
+    </div>
     <div class="clean"></div>
+
+    {% if settings.SHOW_ACCEPTED_ANSWER_FIRST == False %}
+        {% if thread.has_accepted_answer() and answers and thread.accepted_answer != answers[0] %}
+            <a class="best-answer-link" href="{{ thread.accepted_answer.get_absolute_url() }}">
+                {% trans %}See the accepted answer{% endtrans %}
+            </a>
+        {% endif %}
+    {% endif %} 
 
     {% for answer in answers %}
-        {% if answers|length > 1 and loop.index == 2 %}
-            {{ settings.QUESTION_PAGE_ANSWER_BANNER|safe }}
-        {% endif %}
         {% include "question/answer_card.html" %}
+        {% if loop.index == 1 and 'QUESTION_PAGE_ANSWER_BANNER'|show_block_to(request.user) %}
+            <div class="banner">{{ settings.QUESTION_PAGE_ANSWER_BANNER|safe }}</div>
+        {% endif %}
     {% endfor %}
 
-    {{ macros.paginator(paginator_context, anchor='#sort-top') }}
+    <div class="pager">
+        {{ macros.paginator(paginator_context, anchor='#sort-top') }}
+    </div>
     <div class="clean"></div>
-{% else %}
-    {% include "question/sharing_prompt_phrase.html" %}
+{% elif settings.QUESTION_PAGE_ALWAYS_SHOW_ANSWER_BANNER %}
+    <div class="clearfix"></div>
+    {% if 'QUESTION_PAGE_ANSWER_BANNER'|show_block_to(request.user) %}
+        <div class="banner">{{ settings.QUESTION_PAGE_ANSWER_BANNER|safe }}</div>
+    {% endif %}
 {% endif %}
 
 {# buttons below cannot be cached yet #}
-{% if user_already_gave_answer %}
-    <a
-        class="submit"
-        href="{% url "edit_answer" previous_answer.id %}"
-    >{% trans %}Edit Your Previous Answer{% endtrans %}</a>
-    <span>{% trans %}(only one answer per question is allowed){% endtrans %}</span>
-{% else %}
+{% if new_answer_allowed %}
     {% include "question/new_answer_form.html" %}
+{% else %}
+    <div style="margin-top: 15px">
+        <a
+            class="button submit"
+            href="{% url "edit_answer" previous_answer.id %}"
+        >{{ settings.WORDS_EDIT_YOUR_PREVIOUS_ANSWER|escape }}</a>
+        <span>{{ settings.WORDS_ONLY_ONE_ANSWER_PER_USER_IS_ALLOWED|escape }}</span>
+        <div class="invisible">
+            {# hidden because we still need js from the tinymce widget #}
+            {% include "question/new_answer_form.html" %}
+        </div>
+    </div>
 {% endif %}
-{% if question.closed == False and request.user == question.author %}{# this is outside the form on purpose #}
+{% if question.closed == False and request.user.pk == question.author_id %}{# this is outside the form on purpose #}
 <input 
   type="button"
-  class="submit after-editor answer-own-question"
+  class="submit answer-own-question"
   id="fmanswer_button"
-  value="{% trans %}Answer Your Own Question{% endtrans %}"
+  value="{{ settings.WORDS_ANSWER_YOUR_OWN_QUESTION|escape }}"
 />
 {% endif %}

@@ -1,6 +1,6 @@
 {% import "macros.html" as macros %}
 
-{% if settings.SIDEBAR_MAIN_HEADER %}
+{% if 'SIDEBAR_MAIN_HEADER'|show_block_to(request.user) %}
 <div class="box">
     {{ settings.SIDEBAR_MAIN_HEADER }}
 </div>
@@ -19,10 +19,13 @@
 {% endif %}
 
 {% if tags and settings.SIDEBAR_MAIN_SHOW_TAGS %}
+<div class="box">
+    <h2>{% trans %}Tags{% endtrans %}</h2>
     {% include "widgets/related_tags.html" %}
+</div>
 {% endif %}
 
-{% if settings.SIDEBARE_MAIN_FOOTER %}
+{% if 'SIDEBAR_MAIN_FOOTER'|show_block_to(request.user) %}
 <div class="box">
     {{ settings.SIDEBAR_MAIN_FOOTER }}
 </div>

@@ -15,7 +15,7 @@ FORUM_DATA_RULES = livesettings.ConfigurationGroup(
 
 EDITOR_CHOICES = (
     ('markdown', 'markdown'),
-    ('tinymce', 'WISYWIG (tinymce)')
+    ('tinymce', 'WYSIWYG (tinymce)')
 )
 
 settings.register(
@@ -27,6 +27,36 @@ settings.register(
         description = _('Editor for the posts')
     )
 )
+
+COMMENTS_EDITOR_CHOICES = (
+    ('plain-text', 'Plain text editor'),
+    ('rich-text', 'Same editor as for questions and answers')
+)
+
+settings.register(
+    livesettings.StringValue(
+        FORUM_DATA_RULES,
+        'COMMENTS_EDITOR_TYPE',
+        default='plain-text',
+        choices=COMMENTS_EDITOR_CHOICES,
+        description=_('Editor for the comments')
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        FORUM_DATA_RULES,
+        'ASK_BUTTON_ENABLED',
+        default=True,
+        description=_('Enable big Ask button'),
+        help_text=_(
+            'Disabling this button will reduce number of new questions. '
+            'If this button is disabled, the ask button in the search menu '
+            'will still be available.'
+        )
+    )
+)
+
 
 settings.register(
     livesettings.BooleanValue(
@@ -54,12 +84,22 @@ settings.register(
         FORUM_DATA_RULES,
         'ALLOW_ASK_ANONYMOUSLY',
         default=True,
-        description=_('Allow asking questions anonymously'),
+        description=_('Allow logged in users ask anonymously'),
         help_text=_(
             'Users do not accrue reputation for anonymous questions '
             'and their identity is not revealed until they change their '
             'mind'
         )
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        FORUM_DATA_RULES,
+        'ALLOW_ASK_UNREGISTERED',
+        default=False,
+        description=_('Allow asking without registration'),
+        help_text=_('Enabling ReCaptcha is recommended with this feature')
     )
 )
 
@@ -83,13 +123,28 @@ settings.register(
 settings.register(
     livesettings.BooleanValue(
         FORUM_DATA_RULES,
-        'ALLOW_SWAPPING_QUESTION_WITH_ANSWER',
-        default = False,
-        description = _('Allow swapping answer with question'),
-        help_text = _(
-            'This setting will help import data from other forums '
-            'such as zendesk, when automatic '
-            'data import fails to detect the original question correctly.'
+        'AUTO_FOLLOW_QUESTION_BY_OP',
+        default=True,
+        description=_('Auto-follow questions by the Author')
+    )
+)
+
+QUESTION_BODY_EDITOR_MODE_CHOICES = (
+    ('open', _('Fully open by default')),
+    ('folded', _('Folded by default'))
+)
+
+settings.register(
+    livesettings.StringValue(
+        FORUM_DATA_RULES,
+        'QUESTION_BODY_EDITOR_MODE',
+        choices=QUESTION_BODY_EDITOR_MODE_CHOICES,
+        default='open',
+        description=_('Question details/body editor should be'),
+        help_text =_(
+            '<b style="color:red;">To use folded mode, please first set minimum '
+            'question body length to 0. Also - please make tags '
+            'optional.</b>'
         )
     )
 )
@@ -137,11 +192,68 @@ settings.register(
 settings.register(
     livesettings.BooleanValue(
         FORUM_DATA_RULES,
+        'COMMENT_EDITING_BUMPS_THREAD',
+        default=False,
+        description=_('Show comment updates on the main page')
+    )
+)
+
+settings.register(
+    livesettings.IntegerValue(
+        FORUM_DATA_RULES,
+        'MIN_COMMENT_BODY_LENGTH',
+        default=10,
+        description=_(
+            'Minimum length of comment (number of characters)'
+        )
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        FORUM_DATA_RULES,
         'LIMIT_ONE_ANSWER_PER_USER',
-        default = True,
-        description = _(
+        default=True,
+        description=_(
             'Limit one answer per question per user'
         )
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        FORUM_DATA_RULES,
+        'COMMENTING_CLOSED_QUESTIONS_ENABLED',
+        default=True,
+        description=_('Allow commenting in closed questions')
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        FORUM_DATA_RULES,
+        'ACCEPTING_ANSWERS_ENABLED',
+        default=True,
+        description = _('Enable accepting best answer')
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        FORUM_DATA_RULES,
+        'SHOW_ACCEPTED_ANSWER_FIRST',
+        default=True,
+        description=_('Show accepted answer first')
+    )
+)
+
+settings.register(
+    livesettings.StringValue(
+        FORUM_DATA_RULES,
+        'DEFAULT_ANSWER_SORT_METHOD',
+        default=const.DEFAULT_ANSWER_SORT_METHOD,
+        choices=const.ANSWER_SORT_METHODS,
+        description=_('How to sort answers by default')
     )
 )
 
@@ -261,8 +373,26 @@ settings.register(
     livesettings.BooleanValue(
         FORUM_DATA_RULES,
         'TAG_SEARCH_INPUT_ENABLED',
-        default = False,
-        description = _('Enable separate tag search box on main page')
+        default=False,
+        description=_('Enable separate tag search box on main page')
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        FORUM_DATA_RULES,
+        'QUESTION_COMMENTS_ENABLED',
+        default=True,
+        description=_('Enable comments under questions')
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+       FORUM_DATA_RULES,
+       'ANSWER_COMMENTS_ENABLED',
+       default=True,
+       description=_('Enable comments under answers')
     )
 )
 
@@ -278,12 +408,21 @@ settings.register(
 )
 
 settings.register(
+    livesettings.BooleanValue(
+        FORUM_DATA_RULES,
+        'COMMENTS_REVERSED',
+        default=False,
+        description=_('Reverse ordering of comments')
+    )
+)
+
+settings.register(
     livesettings.IntegerValue(
         FORUM_DATA_RULES,
         'MAX_COMMENT_LENGTH',
         default=300,
         description=_(
-                'Maximum comment length, must be < %(max_len)s'
+                'Maximum comment length, must be &lt; %(max_len)s'
             ) % {'max_len': const.COMMENT_HARD_MAX_LENGTH }
     )
 )
@@ -293,11 +432,8 @@ settings.register(
         FORUM_DATA_RULES,
         'USE_TIME_LIMIT_TO_EDIT_COMMENT',
         default = True,
-        description = _('Limit time to edit comments'),
-        help_text = _(
-                        'If unchecked, there will be no time '
-                        'limit to edit the comments'
-                    )
+        description=_('Limit time to edit comments'),
+        help_text=_('If unchecked, there will be no time limit')
     )
 )
 
@@ -305,9 +441,9 @@ settings.register(
     livesettings.IntegerValue(
         FORUM_DATA_RULES,
         'MINUTES_TO_EDIT_COMMENT',
-        default = 10,
-        description = _('Minutes allowed to edit a comment'),
-        help_text = _('To enable this setting, check the previous one')
+        default=10,
+        description=_('Minutes allowed to edit a comment'),
+        help_text=_('To enable this setting, check the previous one')
     )
 )
 
@@ -315,8 +451,52 @@ settings.register(
     livesettings.BooleanValue(
         FORUM_DATA_RULES,
         'SAVE_COMMENT_ON_ENTER',
-        default = True,
-        description = _('Save comment by pressing <Enter> key')
+        default=False,
+        description=_('Save comment by pressing &lt;Enter&gt; key'),
+        help_text=_(
+            'This may be useful when only one-line comments '
+            'are desired. Will not work with TinyMCE editor.'
+        )
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        FORUM_DATA_RULES,
+        'USE_TIME_LIMIT_TO_EDIT_ANSWER',
+        defualt=False,
+        description=_('Limit time to edit answers'),
+        help_text=_('If unchecked, there will be no time limit')
+    )
+)
+
+settings.register(
+    livesettings.IntegerValue(
+        FORUM_DATA_RULES,
+        'MINUTES_TO_EDIT_ANSWER',
+        default = 300,
+        description=_('Minutes allowed to edit answers'),
+        help_text=_('To enable this setting, check the previous one')
+    )
+)
+
+settings.register(
+    livesettings.BooleanValue(
+        FORUM_DATA_RULES,
+        'USE_TIME_LIMIT_TO_EDIT_QUESTION',
+        defualt=False,
+        description=_('Limit time to edit questions'),
+        help_text=_('If unchecked, there will be no time limit')
+    )
+)
+
+settings.register(
+    livesettings.IntegerValue(
+        FORUM_DATA_RULES,
+        'MINUTES_TO_EDIT_QUESTION',
+        default = 300,
+        description = _('Minutes allowed to edit questions'),
+        help_text = _('To enable this setting, check the previous one')
     )
 )
 
@@ -354,7 +534,7 @@ settings.register(
     )
 )
 
-#todo: looks like there is a bug in askbot.deps.livesettings 
+#todo: looks like there is a bug in askbot.deps.livesettings
 #that does not allow Integer values with defaults and choices
 settings.register(
     livesettings.StringValue(
@@ -375,3 +555,18 @@ settings.register(
         description=_('What should "unanswered question" mean?')
     )
 )
+
+settings.register(
+    livesettings.BooleanValue(
+        FORUM_DATA_RULES,
+        'ALLOW_SWAPPING_QUESTION_WITH_ANSWER',
+        default = False,
+        description = _('Allow swapping answer with question'),
+        help_text = _(
+            'This setting will help import data from other forums '
+            'such as zendesk, when automatic '
+            'data import fails to detect the original question correctly.'
+        )
+    )
+)
+

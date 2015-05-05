@@ -14,9 +14,11 @@ import re
 import south
 import sys
 import urllib
-from django.db import transaction, connection
+from django.db import connection
 from django.conf import settings as django_settings
+from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
+from datetime import datetime
 from askbot.utils.loading import load_module
 from askbot.utils.functions import enumerate_string_list
 from askbot.utils.url_utils import urls_equal
@@ -31,7 +33,8 @@ PREAMBLE = """\n
 """
 
 FOOTER = """\n
-If necessary, type ^C (Ctrl-C) to stop the program.
+If necessary, type ^C (Ctrl-C) to stop the program
+(to disable the self-test add ASKBOT_SELF_TEST = False).
 """
 
 class AskbotConfigError(ImproperlyConfigured):
@@ -43,9 +46,18 @@ class AskbotConfigError(ImproperlyConfigured):
             msg += FOOTER
             super(AskbotConfigError, self).__init__(msg)
 
+def domain_is_bad():
+    from askbot.conf import settings as askbot_settings
+    parsed = urlparse(askbot_settings.APP_URL)
+    if parsed.netloc == '':
+        return True
+    if parsed.scheme not in ('http', 'https'):
+        return True
+    return False
+
 def askbot_warning(line):
     """prints a warning with the nice header, but does not quit"""
-    print >> sys.stderr, line
+    print >> sys.stderr, unicode(line).encode('utf-8')
 
 def print_errors(error_messages, header = None, footer = None):
     """if there is one or more error messages,
@@ -65,6 +77,7 @@ def print_errors(error_messages, header = None, footer = None):
     message += '\n\n'.join(error_messages)
     if footer:
         message += '\n\n' + footer
+
     raise AskbotConfigError(message)
 
 def format_as_text_tuple_entries(items):
@@ -107,6 +120,26 @@ def test_askbot_url():
             except AssertionError:
                 msg = 'if ASKBOT_URL setting is not empty, ' + \
                         'it must not start with /'
+
+
+def test_jinja2():
+    """tests Jinja2 settings"""
+    compressor_ext = 'compressor.contrib.jinja2ext.CompressorExtension'
+    ext_list = getattr(django_settings, 'JINJA2_EXTENSIONS', None)
+    errors = list()
+    if ext_list is None:
+        errors.append(
+            "Please add the following line to your settings.py:\n"
+            "JINJA2_EXTENSIONS = ('%s',)" % compressor_ext
+        )
+    elif compressor_ext not in ext_list:
+        errors.append(
+            "Please add to the JINJA2_EXTENSIONS list an item:\n"
+            "'%s'," % compressor_ext
+        )
+
+    print_errors(errors)
+
 
 def test_middleware():
     """Checks that all required middleware classes are
@@ -198,16 +231,6 @@ def test_postgres():
         else:
             pass #everythin is ok
 
-def test_encoding():
-    """prints warning if encoding error is not UTF-8"""
-    if hasattr(sys.stdout, 'encoding'):
-        if sys.stdout.encoding != 'UTF-8':
-            askbot_warning(
-                'Your output encoding is not UTF-8, there may be '
-                'issues with the software when anything is printed '
-                'to the terminal or log files'
-            )
-
 def test_template_loader():
     """Sends a warning if you have an old style template
     loader that used to send a warning"""
@@ -231,7 +254,7 @@ def test_template_loader():
         errors.append(
             '"%s" must be the first element of TEMPLATE_LOADERS' % current_loader
         )
-        
+
     print_errors(errors)
 
 def test_celery():
@@ -287,6 +310,25 @@ def test_celery():
             "in your settings.py file"
         )
 
+def test_compressor():
+    """test settings for django compressor"""
+    errors = list()
+
+    js_filters = getattr(django_settings, 'COMPRESS_JS_FILTERS', [])
+    if len(js_filters) > 0:
+        errors.append(
+            'Askbot does not yet support js minification, please add to your settings.py:\n'
+            'COMPRESS_JS_FILTERS = []'
+        )
+
+    if 'compressor' not in django_settings.INSTALLED_APPS:
+        errors.append(
+            'add to the INSTALLED_APPS the following entry:\n'
+            "    'compressor',"
+        )
+
+    print_errors(errors)
+
 def test_media_url():
     """makes sure that setting `MEDIA_URL`
     has leading slash"""
@@ -310,7 +352,8 @@ class SettingsTester(object):
         * required_value (optional)
         * error_message
         """
-        self.settings = load_module(os.environ['DJANGO_SETTINGS_MODULE'])
+        settings_module = os.environ['DJANGO_SETTINGS_MODULE']
+        self.settings = load_module(settings_module.encode('utf-8'))
         self.messages = list()
         self.requirements = requirements
 
@@ -445,7 +488,7 @@ def test_staticfiles():
     if extra_skins_dir is not None:
         if not os.path.isdir(extra_skins_dir):
             errors.append(
-                'Directory specified with settning ASKBOT_EXTRA_SKINS_DIR '
+                'Directory specified with setting ASKBOT_EXTRA_SKINS_DIR '
                 'must exist and contain your custom skins for askbot.'
             )
         if extra_skins_dir not in staticfiles_dirs:
@@ -470,6 +513,26 @@ def test_staticfiles():
         errors.append(
             'Run command (after fixing the above errors)\n'
             '    python manage.py collectstatic\n'
+        )
+
+    required_finders = (
+        'django.contrib.staticfiles.finders.FileSystemFinder',
+        'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+        'compressor.finders.CompressorFinder',
+    )
+
+    finders = getattr(django_settings, 'STATICFILES_FINDERS', None)
+
+    missing_finders = list()
+    for finder in required_finders:
+        if finder not in finders:
+            missing_finders.append(finder)
+
+    if missing_finders:
+        errors.append(
+            'Please make sure that the following items are \n' + \
+            'part of the STATICFILES_FINDERS tuple, create this tuple, if it is missing:\n' +
+            '    "' + '",\n    "'.join(missing_finders) + '",\n'
         )
 
     print_errors(errors)
@@ -537,25 +600,36 @@ def test_avatar():
     """if "avatar" is in the installed apps,
     checks that the module is actually installed"""
     if 'avatar' in django_settings.INSTALLED_APPS:
-        try_import('Image', 'PIL', short_message = True)
-        try_import(
-            'avatar',
-            '-e git+git://github.com/ericflo/django-avatar.git#egg=avatar',
-            short_message = True
-        )
+        try_import('avatar', 'django-avatar', short_message=True)
 
 def test_haystack():
     if 'haystack' in django_settings.INSTALLED_APPS:
         try_import('haystack', 'django-haystack', short_message = True)
         if getattr(django_settings, 'ENABLE_HAYSTACK_SEARCH', False):
             errors = list()
-            if not hasattr(django_settings, 'HAYSTACK_SEARCH_ENGINE'):
-                message = "Please HAYSTACK_SEARCH_ENGINE to an appropriate value, value 'simple' can be used for basic testing"
+            if not hasattr(django_settings, 'HAYSTACK_CONNECTIONS'):
+                message = "Please HAYSTACK_CONNECTIONS to an appropriate value, value 'simple' can be used for basic testing sample:\n"
+                message += """HAYSTACK_CONNECTIONS = {
+                    'default': {
+                    'ENGINE': 'haystack.backends.simple_backend.SimpleEngine',
+                        }
+                    }"""
                 errors.append(message)
-            if not hasattr(django_settings, 'HAYSTACK_SITECONF'):
-                message = 'Please add HAYSTACK_SITECONF = "askbot.search.haystack"'
-                errors.append(message)
-            footer = 'Please refer to haystack documentation at http://django-haystack.readthedocs.org/en/v1.2.7/settings.html#haystack-search-engine'
+
+            if getattr(django_settings, 'ASKBOT_MULTILINGUAL'):
+                if not hasattr(django_settings, "HAYSTACK_ROUTERS"):
+                    message = "Please add HAYSTACK_ROUTERS = ['askbot.search.haystack.routers.LanguageRouter',] to settings.py"
+                    errors.append(message)
+                elif 'askbot.search.haystack.routers.LanguageRouter' not in \
+                        getattr(django_settings, 'HAYSTACK_ROUTERS'):
+                    message = "'askbot.search.haystack.routers.LanguageRouter' to HAYSTACK_ROUTERS as first element in settings.py"
+                    errors.append(message)
+
+            if getattr(django_settings, 'HAYSTACK_SIGNAL_PROCESSOR',
+                       '').endswith('AskbotCelerySignalProcessor'):
+                try_import('celery_haystack', 'celery-haystack', short_message = True)
+
+            footer = 'Please refer to haystack documentation at https://django-haystack.readthedocs.org/en/latest/settings.html'
             print_errors(errors, footer=footer)
 
 def test_custom_user_profile_tab():
@@ -609,7 +683,6 @@ def test_tinymce():
     required_attrs = (
         'TINYMCE_COMPRESSOR',
         'TINYMCE_JS_ROOT',
-        'TINYMCE_URL',
         'TINYMCE_DEFAULT_CONFIG'
     )
 
@@ -664,16 +737,6 @@ def test_tinymce():
             error_tpl += '\nNote: we have moved files from "common" into "default"'
         errors.append(error_tpl % relative_js_path)
 
-    #check url setting
-    url = getattr(django_settings, 'TINYMCE_URL', '')
-    expected_url = django_settings.STATIC_URL + relative_js_path
-    old_expected_url = django_settings.STATIC_URL + old_relative_js_path
-    if urls_equal(url, expected_url) is False:
-        error_tpl = "add line: TINYMCE_URL = STATIC_URL + '%s'"
-        if urls_equal(url, old_expected_url):
-            error_tpl += '\nNote: we have moved files from "common" into "default"'
-        errors.append(error_tpl % relative_js_path)
-
     if errors:
         header = 'Please add the tynymce editor configuration ' + \
             'to your settings.py file.'
@@ -708,6 +771,7 @@ def test_template_context_processors():
         'askbot.context.application_settings',
         'askbot.user_messages.context_processors.user_messages',
         'django.core.context_processors.csrf',
+        'askbot.deps.group_messaging.context.group_messaging_context',
     ]
     old_auth_processor = 'django.core.context_processors.auth'
     new_auth_processor = 'django.contrib.auth.context_processors.auth'
@@ -721,7 +785,7 @@ def test_template_context_processors():
         required_processors.append(new_auth_processor)
         if old_auth_processor in django_settings.TEMPLATE_CONTEXT_PROCESSORS:
             invalid_processors.append(old_auth_processor)
-            
+
     missing_processors = list()
     for processor in required_processors:
         if processor not in django_settings.TEMPLATE_CONTEXT_PROCESSORS:
@@ -743,12 +807,25 @@ def test_template_context_processors():
 
 def test_cache_backend():
     """prints a warning if cache backend is disabled or per-process"""
+    #test that cache actually works
+    errors = list()
+
+    test_value = 'test value %s' % datetime.now()
+    cache.set('askbot-cache-test', test_value)
+    if cache.get('askbot-cache-test') != test_value:
+        errors.append(
+            'Cache server is unavailable.\n'
+            'Check your CACHE... settings and make sure that '
+            'the cache backend is working properly.'
+        )
+    print_errors(errors)
+
+    #test the cache backend settings
     if django.VERSION[1] > 2:
         backend = django_settings.CACHES['default']['BACKEND']
     else:
         backend = django_settings.CACHE_BACKEND
 
-    errors = list()
     if backend.strip() == '' or 'dummy' in backend:
         message = """Please enable at least a "locmem" cache (for a single process server).
 If you need to run > 1 server process, set up some production caching system,
@@ -790,7 +867,7 @@ def test_group_messaging():
             errors.append(
                 "make setting 'GROUP_MESSAGING to be exactly:\n" + settings_sample
             )
-            
+
         url_params = settings.get('BASE_URL_PARAMS', None)
     else:
         errors.append('add this to your settings.py:\n' + settings_sample)
@@ -808,6 +885,19 @@ def test_secret_key():
             'Please change your SECRET_KEY setting, the current is not secure'
         ])
 
+def test_locale_middlewares():
+    is_multilang = getattr(django_settings, 'ASKBOT_MULTILINGUAL', False)
+    django_locale_middleware = 'django.middleware.locale.LocaleMiddleware'
+    askbot_locale_middleware = 'askbot.middleware.locale.LocaleMiddleware'
+    errors = list()
+
+    if is_multilang:
+        if askbot_locale_middleware in django_settings.MIDDLEWARE_CLASSES:
+            errors.append("Please remove '%s' from your MIDDLEWARE_CLASSES" % askbot_locale_middleware)
+        if django_locale_middleware not in django_settings.MIDDLEWARE_CLASSES:
+            errors.append("Please add '%s' to your MIDDLEWARE_CLASSES" % django_locale_middleware)
+
+    print_errors(errors)
 
 def test_multilingual():
     is_multilang = getattr(django_settings, 'ASKBOT_MULTILINGUAL', False)
@@ -819,7 +909,7 @@ def test_multilingual():
         errors.append('ASKBOT_MULTILINGUAL=True works only with django >= 1.4')
 
     if is_multilang:
-        middleware = 'django.middleware.locale.LocaleMiddleware' 
+        middleware = 'django.middleware.locale.LocaleMiddleware'
         if middleware not in django_settings.MIDDLEWARE_CLASSES:
             errors.append(
                 "add 'django.middleware.locale.LocaleMiddleware' to your MIDDLEWARE_CLASSES "
@@ -835,32 +925,79 @@ def test_multilingual():
 
     print_errors(errors)
 
+def test_messages_framework():
+    if not 'django.contrib.messages' in django_settings.INSTALLED_APPS:
+        errors = ('Add to the INSTALLED_APPS section of your settings.py:\n "django.contrib.messages"', )
+        print_errors(errors)
+
+def test_service_url_prefix():
+    errors = list()
+    prefix = getattr(django_settings, 'ASKBOT_SERVICE_URL_PREFIX', '')
+    message = 'Service url prefix must have > 1 letters and must end with /'
+    if prefix:
+        if len(prefix) == 1 or (not prefix.endswith('/')):
+            print_errors((message,))
+
+def test_versions():
+    """inform of version incompatibilities, where possible"""
+    errors = list()
+    py_ver = sys.version_info
+    #python3 will not work
+    if py_ver[0] == 3:
+        errors.append(
+            'Askbot does not yet support Python3, please use '
+            'the latest release of Python 2.x'
+        )
+
+    #if django version is >= 1.5, require python 2.6.5 or higher
+    dj_ver = django.VERSION
+    if dj_ver[:2] > (1, 5):
+        errors.append(
+            'Highest major version of django supported is 1.5 '
+            'if you would like to try newer version add setting.'
+        )
+    elif dj_ver[0:2] == (1, 5) and py_ver[:3] < (2, 6, 4):
+        errors.append(
+            'Django 1.5 and higher requires Python '
+            'version 2.6.4 or higher, please see release notes.\n'
+            'https://docs.djangoproject.com/en/dev/releases/1.5/'
+        )
+
+    print_errors(errors)
 
 def run_startup_tests():
     """function that runs
     all startup tests, mainly checking settings config so far
     """
+    #this is first because it gives good info on what to install
+    test_modules()
 
     #todo: refactor this when another test arrives
-    test_template_loader()
-    test_encoding()
-    test_modules()
+    test_versions()
     test_askbot_url()
-    #test_postgres()
-    test_middleware()
+    test_avatar()
+    test_cache_backend()
     test_celery()
+    test_compressor()
+    test_custom_user_profile_tab()
+    test_group_messaging()
+    test_haystack()
+    test_jinja2()
+    test_longerusername()
+    test_new_skins()
+    test_media_url()
+    #test_postgres()
+    test_messages_framework()
+    test_middleware()
+    test_multilingual()
+    test_locale_middlewares()
     #test_csrf_cookie_domain()
+    test_secret_key()
+    test_service_url_prefix()
+    test_staticfiles()
+    test_template_loader()
     test_template_context_processors()
     test_tinymce()
-    test_staticfiles()
-    test_new_skins()
-    test_longerusername()
-    test_avatar()
-    test_group_messaging()
-    test_multilingual()
-    test_haystack()
-    test_cache_backend()
-    test_secret_key()
     settings_tester = SettingsTester({
         'CACHE_MIDDLEWARE_ANONYMOUS_ONLY': {
             'value': True,
@@ -891,30 +1028,19 @@ def run_startup_tests():
             'value': True,
             'message': 'Please add: RECAPTCHA_USE_SSL = True'
         },
-        'HAYSTACK_SITECONF': {
-            'value': 'askbot.search.haystack',
-            'message': 'Please add: HAYSTACK_SITECONF = "askbot.search.haystack"'
-        }
     })
     settings_tester.run()
-    test_media_url()
     if 'manage.py test' in ' '.join(sys.argv):
         test_settings_for_test_runner()
-    test_custom_user_profile_tab()
 
-@transaction.commit_manually
 def run():
-    """runs all the startup procedures"""
     try:
-        run_startup_tests()
+        if getattr(django_settings, 'ASKBOT_SELF_TEST', True):
+            run_startup_tests()
     except AskbotConfigError, error:
-        transaction.rollback()
         print error
         sys.exit(1)
-    try:
-        from askbot.models import badges
-        badges.init_badges()
-        transaction.commit()
-    except Exception, error:
-        print error
-        transaction.rollback()
+    # close DB and cache connections to prevent issues in prefork mode
+    connection.close()
+    if hasattr(cache, 'close'):
+        cache.close()

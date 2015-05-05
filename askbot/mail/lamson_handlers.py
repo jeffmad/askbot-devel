@@ -1,6 +1,8 @@
-import re
 import functools
+import re
+import sys
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.urlresolvers import reverse
 from django.conf import settings as django_settings
 from django.template import Context
 from django.template.loader import get_template
@@ -10,6 +12,8 @@ from lamson.server import Relay
 from askbot.models import ReplyAddress, Group, Tag
 from askbot import mail
 from askbot.conf import settings as askbot_settings
+from askbot.utils.html import site_url
+from askbot.mail import DEBUG_EMAIL
 
 #we might end up needing to use something like this
 #to distinguish the reply text from the quoted original message
@@ -160,18 +164,14 @@ def process_reply(func):
              received the notification.")
         except Exception, e:
             import sys
-            sys.stderr.write(str(e))
+            sys.stderr.write(unicode(e).encode('utf-8'))
             import traceback
-            sys.stderr.write(traceback.format_exc())
+            sys.stderr.write(unicode(traceback.format_exc()).encode('utf-8'))
 
         if error is not None:
-            template = get_template('email/reply_by_email_error.html')
-            body_text = template.render(Context({'error':error}))#todo: set lang
-            mail.send_mail(
-                subject_line = "Error posting your reply",
-                body_text = body_text,
-                recipient_list = [message.From],
-            )
+            from askbot.mail.messages import ReplyByEmailError
+            email = ReplyByEmailError({'error': error})
+            email.send([message.From])
 
     return wrapped
 
@@ -189,6 +189,13 @@ def ASK(message, host = None, addr = None):
 
     parts = get_parts(message)
     from_address = message.From
+
+    if DEBUG_EMAIL:
+        sys.stderr.write(
+            (u'Received email from %s\n' % from_address).encode('utf-8')
+        )
+
+
     #why lamson does not give it normally?
     subject = message['Subject'].strip('\n\t ')
     body_text, stored_files, unused = mail.process_parts(parts)
@@ -226,26 +233,26 @@ def VALIDATE_EMAIL(
     todo: go a step further and
     """
     reply_code = reply_address_object.address
+
+    if DEBUG_EMAIL:
+        msg = u'Received email validation from %s\n' % from_address
+        sys.stderr.write(msg.encode('utf-8'))
+
     try:
         content, stored_files, signature = mail.process_parts(parts, reply_code)
+
         user = reply_address_object.user
-        if signature and signature != user.email_signature:
+
+        if signature != user.email_signature:
             user.email_signature = signature
+
         user.email_isvalid = True
         user.save()
 
-        data = {
-            'site_name': askbot_settings.APP_SHORT_NAME,
-            'site_url': askbot_settings.APP_URL,
-            'ask_address': 'ask@' + askbot_settings.REPLY_BY_EMAIL_HOSTNAME
-        }
-        template = get_template('email/re_welcome_lamson_on.html')
+        from askbot.mail.messages import ReWelcomeEmail
+        email = ReWelcomeEmail({'recipient_user': user})
+        email.send([from_address,])
 
-        mail.send_mail(
-            subject_line = _('Re: Welcome to %(site_name)s') % data,
-            body_text = template.render(Context(data)),#todo: set lang
-            recipient_list = [from_address,]
-        )
     except ValueError:
         raise ValueError(
             _(
@@ -267,27 +274,29 @@ def PROCESS(
     """handler to process the emailed message
     and make a post to askbot based on the contents of
     the email, including the text body and the file attachments"""
+    if DEBUG_EMAIL:
+        sys.stderr.write(
+            (u'Received reply from %s\n' % from_address).encode('utf-8')
+        )
     #1) get actual email content
     #   todo: factor this out into the process_reply decorator
     reply_code = reply_address_object.address
-    body_text, stored_files, signature = mail.process_parts(parts, reply_code)
+    body_text, stored_files, signature = mail.process_parts(parts, reply_code, from_address)
 
     #2) process body text and email signature
     user = reply_address_object.user
-    if signature is not None:#if there, then it was stripped
-        if signature != user.email_signature:
-            user.email_signature = signature
-    else:#try to strip signature
-        stripped_body_text = user.strip_email_signature(body_text)
-        #todo: add test cases for emails without the signature
-        if stripped_body_text == body_text and user.email_signature:
-            #todo: send an email asking to update the signature
-            raise ValueError('email signature changed or unknown')
-        body_text = stripped_body_text
 
-    #3) validate email address and save user
+    if signature != user.email_signature:
+        user.email_signature = signature
+
+    #3) validate email address and save user along with maybe new signature
     user.email_isvalid = True
     user.save()#todo: actually, saving is not necessary, if nothing changed
+
+    #here we might be in danger of chomping off some of the 
+    #message is body text ends with a legitimate text coinciding with
+    #the user's email signature
+    body_text = user.strip_email_signature(body_text)
 
     #4) actually make an edit in the forum
     robj = reply_address_object
@@ -303,15 +312,10 @@ def PROCESS(
             robj.create_reply(body_text)
     elif robj.reply_action == 'validate_email':
         #todo: this is copy-paste - factor it out to askbot.mail.messages
-        data = {
-            'site_name': askbot_settings.APP_SHORT_NAME,
-            'site_url': askbot_settings.APP_URL,
-            'ask_address': 'ask@' + askbot_settings.REPLY_BY_EMAIL_HOSTNAME
-        }
-        template = get_template('email/re_welcome_lamson_on.html')
+        from askbot.mail.messages import ReWelcomeEmail
+        email = ReWelcomeEmail({'recipient_user': robj.user})
+        email.send([from_address,])
 
-        mail.send_mail(
-            subject_line = _('Re: %s') % subject_line,
-            body_text = template.render(Context(data)),#todo: set lang
-            recipient_list = [from_address,]
-        )
+        if DEBUG_EMAIL:
+            msg = u'Sending welcome mail to %s\n' % from_address
+            sys.stderr.write(msg.encode('utf-8'))

@@ -11,7 +11,7 @@
                     <th class="tags-col">{% trans %}Tag{% endtrans %}</th>
                     <th class="users-col">{% trans %}Suggested by{% endtrans %}</th>
                     <th class="decision-col">{% trans %}Your decision{% endtrans %}</th>
-                    <th>{% trans %}Suggested tag was used for questions{% endtrans %}</th>
+                    <th>{% trans %}Where the tag was used{% endtrans %}</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,27 +28,38 @@
                     </td>
                     <td colspan="2">
                         <table>{# inner table for the list of questions #}
-                        {% for thread in tag.threads.all() %}
-                            <tr class="thread-info" data-thread-id="{{ thread.id }}">
+                        {% if tag.threads.count() == 0 %}
+                            <tr class="thread-info" data-thread-id="0">
                                 <td class="per-thread-controls">
-                                    <button class="btn accept">{% trans %}Accept{% endtrans %}</button>
-                                    <button class="btn reject">{% trans %}Reject{% endtrans %}</button>
+                                    <button class="accept">{% trans %}Accept{% endtrans %}</button>
+                                    <button class="reject">{% trans %}Reject{% endtrans %}</button>
                                 </td>
                                 <td class="thread-links-col">
-                                    <a title="{{ thread._question_post().summary|escape }}"
-                                        href="{{ thread.get_absolute_url() }}"
-                                    >{{ thread.title|escape }}</a>
+                                    <span>{% trans %}This tag has not yet been used{% endtrans %}</span>
                                 </td>
                             </tr>
-                        {% endfor %}
+                        {% else %}
+                            {% for thread in tag.threads.all() %}
+                                <tr class="thread-info" data-thread-id="{{ thread.id }}">
+                                    <td class="per-thread-controls">
+                                        <button class="accept">{% trans %}Accept{% endtrans %}</button>
+                                        <button class="reject">{% trans %}Reject{% endtrans %}</button>
+                                    </td>
+                                    <td class="thread-links-col">
+                                        <a href="{{ thread.get_absolute_url() }}"
+                                        >{{ thread.title|escape }}</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
                         </table>
                     </td>
                 </tr>
                 <tr class="per-tag-controls" data-tag-id="{{ tag.id }}">
                     <td colspan="4">
                         {% if tag.threads.count() > 1 %}
-                            <button class="btn accept">{% trans name=tag.name %}Apply tag "{{ name }}" to all above questions{% endtrans %}</button>
-                            <button class="btn reject">{% trans %}Reject tag{% endtrans %}</button>
+                            <button class="accept">{% trans name=tag.name %}Apply tag "{{ name }}" to the above{% endtrans %}</button>
+                            <button class="reject">{% trans %}Reject tag{% endtrans %}</button>
                         {% endif %}
                     </td>
                 </tr>
@@ -63,5 +74,7 @@
     <script type="text/javascript">
         askbot['urls']['moderateSuggestedTag'] = '{% url "moderate_suggested_tag" %}';
     </script>
+    {% compress js %}
     <script type="text/javascript" src="{{ '/js/tag_moderation.js'|media }}"></script>
+    {% endcompress %}
 {% endblock %}

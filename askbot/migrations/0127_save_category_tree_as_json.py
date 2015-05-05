@@ -71,9 +71,16 @@ class Migration(DataMigration):
         """reads category tree saved as string,
         translates it to json and saves back"""
         old_data = askbot_settings.CATEGORY_TREE
+
+        #this special value is our new default,
+        #we don't want to create a tag with this name
+        if old_data.replace(' ', '') == '[["dummy",[]]]':
+            old_data = ''
+
         json_data = parse_tree(old_data)
-        json_string = simplejson.dumps(json_data)
-        askbot_settings.update('CATEGORY_TREE',  json_string)
+        json_string = simplejson.dumps(json_data).replace(' ', '')
+        if json_string.replace(' ', '') != askbot_settings.CATEGORY_TREE:
+            askbot_settings.update('CATEGORY_TREE',  json_string)
 
     def backwards(self, orm):
         "Write your backwards methods here."

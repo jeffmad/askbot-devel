@@ -1,12 +1,16 @@
 """Utilities for working with HTML."""
 from bs4 import BeautifulSoup
+from bs4 import NavigableString
 import html5lib
 from html5lib import sanitizer, serializer, tokenizer, treebuilders, treewalkers
 import re
 import htmlentitydefs
 from urlparse import urlparse
 from django.core.urlresolvers import reverse
-from askbot.conf import settings as askbot_settings
+from django.template.loader import get_template
+from django.utils.html import strip_tags as strip_all_tags
+from django.utils.html import urlize
+from django.utils.translation import ugettext as _
 
 class HTMLSanitizerMixin(sanitizer.HTMLSanitizerMixin):
     acceptable_elements = ('a', 'abbr', 'acronym', 'address', 'b', 'big',
@@ -52,28 +56,75 @@ def absolutize_urls(html):
     url_re2 = re.compile(r"(?P<prefix><img[^<]+src=)'(?P<url>/[^']+)'", re.I)
     url_re3 = re.compile(r'(?P<prefix><a[^<]+href=)"(?P<url>/[^"]+)"', re.I)
     url_re4 = re.compile(r"(?P<prefix><a[^<]+href=)'(?P<url>/[^']+)'", re.I)
-    img_replacement = '\g<prefix>"%s/\g<url>" style="max-width:500px;"' % askbot_settings.APP_URL
-    replacement = '\g<prefix>"%s\g<url>"' % askbot_settings.APP_URL
+    base_url = site_url('')#important to have this without the slash
+    img_replacement = '\g<prefix>"%s/\g<url>"' % base_url
+    replacement = '\g<prefix>"%s\g<url>"' % base_url
     html = url_re1.sub(img_replacement, html)
     html = url_re2.sub(img_replacement, html)
     html = url_re3.sub(replacement, html)
     #temporal fix for bad regex with wysiwyg editor
-    return url_re4.sub(replacement, html).replace('%s//' % askbot_settings.APP_URL,
-                                                  '%s/' % askbot_settings.APP_URL)
+    return url_re4.sub(replacement, html).replace('%s//' % base_url, '%s/' % base_url)
+
+def get_word_count(html):
+    return len(strip_all_tags(html).split())
+
+def format_url_replacement(url, text):
+    url = url.strip()
+    text = text.strip()
+    url_domain = urlparse(url).netloc
+    if url and text and url_domain != text and url != text:
+        return '%s (%s)' % (url, text)
+    return url or text or ''
+
+def urlize_html(html, trim_url_limit=40):
+    """will urlize html, while ignoring link
+    patterns inside anchors, <pre> and <code> tags
+    """
+    soup = BeautifulSoup(html, 'html5lib')
+    extract_nodes = list()
+    for node in soup.findAll(text=True):
+        parent_tags = [p.name for p in node.parents]
+        skip_tags = ['a', 'img', 'pre', 'code']
+        if set(parent_tags) & set(skip_tags):
+            continue
+
+        #bs4 is weird, so we work around to replace nodes
+        #maybe there is a better way though
+        urlized_text = urlize(node, trim_url_limit=trim_url_limit)
+        if unicode(node) == urlized_text:
+            continue
+
+        sub_soup = BeautifulSoup(urlized_text, 'html5lib')
+        contents = sub_soup.find('body').contents
+        num_items = len(contents)
+        for i in range(num_items):
+            #there is strange thing in bs4, can't iterate
+            #as the tag seemingly can't belong to >1 soup object
+            child = contents[0] #always take first element
+            #insure that text nodes are sandwiched by space
+            have_string = (not hasattr(child, 'name'))
+            if have_string:
+                node.insert_before(soup.new_string(' '))
+            node.insert_before(child)
+            if have_string:
+                node.insert_before(soup.new_string(' '))
+
+        extract_nodes.append(node)
+
+    #extract the nodes that we replaced
+    for node in extract_nodes:
+        node.extract()
+
+    result = unicode(soup.find('body').renderContents(), 'utf8')
+    if html.endswith('\n') and not result.endswith('\n'):
+        result += '\n'
+    return result
 
 def replace_links_with_text(html):
     """any absolute links will be replaced with the
     url in plain text, same with any img tags
     """
-    def format_url_replacement(url, text):
-        url = url.strip()
-        text = text.strip()
-        url_domain = urlparse(url).netloc
-        if url and text and url_domain != text and url != text:
-            return '%s (%s)' % (url, text)
-        return url or text or ''
-            
-    soup = BeautifulSoup(html)
+    soup = BeautifulSoup(html, 'html5lib')
     abs_url_re = r'^http(s)?://'
 
     images = soup.find_all('img')
@@ -94,10 +145,54 @@ def replace_links_with_text(html):
             link.replaceWith(format_url_replacement(url, text))
 
     return unicode(soup.find('body').renderContents(), 'utf-8')
-            
+
+def get_text_from_html(html_text):
+    """Returns the content part from an HTML document
+    retains links and references to images and line breaks.
+    """
+    soup = BeautifulSoup(html_text, 'html5lib')
+
+    #replace <a> links with plain text
+    links = soup.find_all('a')
+    for link in links:
+        url = link.get('href', '')
+        text = ''.join(link.text) or ''
+        link.replaceWith(format_url_replacement(url, text))
+
+    #replace <img> tags with plain text
+    images = soup.find_all('img')
+    for image in images:
+        url = image.get('src', '')
+        text = image.get('alt', '')
+        image.replaceWith(format_url_replacement(url, text))
+
+    #extract and join phrases
+    body_element = soup.find('body')
+    filter_func = lambda s: bool(s.strip())
+    phrases = map(
+        lambda s: s.strip(),
+        filter(filter_func, body_element.get_text().split('\n'))
+    )
+    return '\n\n'.join(phrases)
+
+def strip_tags(html, tags=None):
+    """strips tags from given html output"""
+    #a corner case
+    if html.strip() == '':
+        return html
+
+    assert(tags != None)
+
+    soup = BeautifulSoup(html, 'html5lib')
+    for tag in tags:
+        tag_matches = soup.find_all(tag)
+        map(lambda v: v.replaceWith(''), tag_matches)
+    return unicode(soup.find('body').renderContents(), 'utf-8')
 
 def sanitize_html(html):
-    """Sanitizes an HTML fragment."""
+    """Sanitizes an HTML fragment.
+    from forbidden markup
+    """
     p = html5lib.HTMLParser(tokenizer=HTMLSanitizer,
                             tree=treebuilders.getTreeBuilder("dom"))
     dom_tree = p.parseFragment(html)
@@ -108,20 +203,80 @@ def sanitize_html(html):
     output_generator = s.serialize(stream)
     return u''.join(output_generator)
 
+def has_moderated_tags(html):
+    """True, if html contains tags subject to moderation
+    (images and/or links)"""
+    from askbot.conf import settings
+    soup = BeautifulSoup(html, 'html5lib')
+    if settings.MODERATE_LINKS:
+        links = soup.find_all('a')
+        if links:
+            return True
+
+    if settings.MODERATE_IMAGES:
+        images = soup.find_all('img')
+        if images:
+            return True
+
+    return False
+
+def moderate_tags(html):
+    """replaces instances of <a> and <img>
+    with "item in moderation" alerts
+    """
+    from askbot.conf import settings
+    soup = BeautifulSoup(html, 'html5lib')
+    replaced = False
+    if settings.MODERATE_LINKS:
+        links = soup.find_all('a')
+        if links:
+            template = get_template('widgets/moderated_link.html')
+            aviso = BeautifulSoup(template.render(), 'html5lib').find('body')
+            map(lambda v: v.replaceWith(aviso), links)
+            replaced = True
+
+    if settings.MODERATE_IMAGES:
+        images = soup.find_all('img')
+        if images:
+            template = get_template('widgets/moderated_link.html')
+            aviso = BeautifulSoup(template.render(), 'html5lib').find('body')
+            map(lambda v: v.replaceWith(aviso), images)
+            replaced = True
+
+    if replaced:
+        return unicode(soup.find('body').renderContents(), 'utf-8')
+
+    return html
+
 def site_url(url):
     from askbot.conf import settings
     base_url = urlparse(settings.APP_URL)
     return base_url.scheme + '://' + base_url.netloc + url
 
-def site_link(url_name, title):
+def internal_link(url_name, title, kwargs=None, anchor=None, absolute=False):
     """returns html for the link to the given url
     todo: may be improved to process url parameters, keyword
     and other arguments
+
+    link url does not have domain
     """
-    from askbot.conf import settings
-    base_url = urlparse(settings.APP_URL)
-    url = site_url(reverse(url_name))
+    url = reverse(url_name, kwargs=kwargs)
+    if anchor:
+        url += '#' + anchor
+    if absolute:
+        url = site_url(url)
     return '<a href="%s">%s</a>' % (url, title)
+
+def site_link(url_name, title, kwargs=None, anchor=None):
+    """same as internal_link, but with the site domain"""
+    return internal_link(
+        url_name, title, kwargs=kwargs, anchor=anchor, absolute=True
+    )
+
+def get_login_link(text=None):
+    from askbot.utils.url_utils import get_login_url
+    text = text or _('please login')
+    return '<a href="%s">%s</a>' % (get_login_url(), text)
 
 def unescape(text):
     """source: http://effbot.org/zone/re-sub.htm#unescape-html

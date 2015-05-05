@@ -1,16 +1,16 @@
 {% extends "widget_base.html" %}
 {% block forestyle %}
-{%endblock%}
+{% endblock %}
 
-{%block body%}
+{% block body %}
 Enter your question
 <form action="." method="POST" accept-charset="utf-8">
   {% csrf_token %}
-  {{form.title}} 
+  {{ form.title }} 
   {% if form.ask_anonymously %}
-  {{form.ask_anonymously}}
-  {%endif%}
+  {{ form.ask_anonymously }}
+  {% endif %}
   <input type="submit" value="Ask your question" />
 </form>
-{{form.errors}}
-{%endblock%}
+{{ form.errors }}
+{% endblock %}

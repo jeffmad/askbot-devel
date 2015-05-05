@@ -17,6 +17,12 @@ from django.utils.encoding import smart_unicode
 # Extra characters outside of alphanumerics that we'll allow.
 SLUG_OK = '-_~'
 
+def slugify_camelcase(camel):
+    """Converts CamelCase to camel-case"""
+    def subf(match):
+        return '-' + match.groups(1)[0].lower()
+    return re.sub('([A-Z])', subf, camel).strip('-')
+
 
 def unicode_slugify(s, ok=SLUG_OK, lower=True, spaces=False):
     """Function copied from https://github.com/mozilla/unicode-slugify
@@ -50,10 +56,13 @@ def slugify(input_text, max_length=150):
         return input_text
 
     allow_unicode_slugs = getattr(settings, 'ALLOW_UNICODE_SLUGS', False)
-    if allow_unicode_slugs:
+    if isinstance(input_text, unicode) and not allow_unicode_slugs:
+        input_text = unidecode(input_text)
+
+    if isinstance(input_text, unicode):
         slug = unicode_slugify(input_text)
     else:
-        slug = defaultfilters.slugify(unidecode(input_text))
+        slug = defaultfilters.slugify(input_text)
     while len(slug) > max_length:
         # try to shorten word by word until len(slug) <= max_length
         temp = slug[:slug.rfind('-')]
@@ -64,4 +73,4 @@ def slugify(input_text, max_length=150):
             #apply the cut-off directly
             slug = slug[:max_length]
             break
-    return slug
+    return slug or '_'

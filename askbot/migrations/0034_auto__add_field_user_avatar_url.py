@@ -3,16 +3,14 @@ import datetime
 from south.db import db
 from south.v2 import SchemaMigration
 from django.db import models
+from askbot.migrations_api import safe_add_column
 
 class Migration(SchemaMigration):
     
     def forwards(self, orm):
         
         # Adding field 'Tag.avatar_url'
-        try:
-            db.add_column(u'auth_user', 'has_custom_avatar', self.gf('django.db.models.fields.BooleanField')(default=False), keep_default=False)
-        except:
-            pass
+        safe_add_column(u'auth_user', 'has_custom_avatar', self.gf('django.db.models.fields.BooleanField')(default=False), keep_default=False)
     
     
     def backwards(self, orm):

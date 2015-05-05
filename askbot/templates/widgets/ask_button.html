@@ -4,6 +4,11 @@
     {% endif %}
     <a
         id="askButton"
-        href="{{ search_state.full_ask_url() }}{% if group %}{% if '?' in search_state.full_ask_url() %}&{% else %}?{% endif %}group_id={{ group.id }}{% endif %}"
-        >{% if group %}{% trans %}Ask the Group{% endtrans %}{% else %}{% trans %}Ask Your Question{% endtrans %}{% endif %}</a>
+        class="button"
+        href="{{ search_state.full_ask_url() }}{% if group %}{% if '?' in search_state.full_ask_url() %}&amp;{% else %}?{% endif %}group_id={{ group.id }}{% endif %}"
+        >{% if group %}
+            {{ settings.WORDS_ASK_THE_GROUP|escape }}
+        {% else %}
+            {{ settings.WORDS_ASK_YOUR_QUESTION|escape }}
+        {% endif %}</a>
 {% endif %}

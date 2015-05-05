@@ -352,3 +352,33 @@ def add_render_shortcut():
 
         import django.shortcuts
         django.shortcuts.render = render
+
+
+from django.utils import six
+from django.utils.functional import Promise
+import django.utils.html
+
+def fix_lazy_double_escape():
+    """
+    Wrap django.utils.html.escape to fix the double escape issue visible at
+    least with field labels with localization
+    """
+    django.utils.html.escape = wrap_escape(django.utils.html.escape)
+
+
+def wrap_escape(func):
+    """
+    Decorator adapted from https://github.com/django/django/pull/1007
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        for arg in list(args) + list(six.itervalues(kwargs)):
+            if isinstance(arg, Promise):
+                break
+        else:
+            return func(*args, **kwargs)
+        return lazy(func, six.text_type)(*args, **kwargs)
+    @wraps(wrapper)
+    def wrapped(*args, **kwargs):
+        return mark_safe(func(*args, **kwargs))
+    return wrapped

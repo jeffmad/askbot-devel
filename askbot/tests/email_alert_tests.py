@@ -10,6 +10,7 @@ import django.core.mail
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 from django.test.client import Client
+from django.utils import translation
 from askbot.tests import utils
 from askbot.tests.utils import with_settings
 from askbot import models
@@ -155,6 +156,7 @@ class EmailAlertTests(TestCase):
         between the default version (defined in the decorator) and the
         desired version in the "real" test
         """
+        translation.activate('en')
         pass
 
     def setUpUsers(self):
@@ -331,7 +333,7 @@ class EmailAlertTests(TestCase):
     @email_alert_test
     def test_answer_delete_comment(self):
         comment = self.proto_post_answer_comment()
-        comment.get_owner().delete_comment(comment = comment)
+        comment.author.delete_comment(comment = comment)
 
     @email_alert_test
     def test_question_edit(self):
@@ -399,7 +401,7 @@ class EmailAlertTests(TestCase):
         in the base class user does not receive a notification
         """
         comment = self.proto_question_comment()
-        comment.get_owner().delete_comment(comment)
+        comment.author.delete_comment(comment)
 
     def proto_test_q_ask(self):
         """base method for tests that
@@ -595,6 +597,19 @@ class BlankWeeklySelectedQuestionsEmailAlertTests(EmailAlertTests):
     def setUp(self):
         self.notification_schedule['q_sel'] = 'w'
         self.setup_timestamp = datetime.datetime.now() - datetime.timedelta(14)
+        self.expected_results['q_ask'] = {'message_count': 1, }
+        self.expected_results['q_ask_delete_answer'] = {'message_count': 0, }
+        self.expected_results['question_comment'] = {'message_count': 0, }
+        self.expected_results['question_comment_delete'] = {'message_count': 0, }
+        self.expected_results['answer_comment'] = {'message_count': 0, }
+        self.expected_results['answer_delete_comment'] = {'message_count': 0, }
+        self.expected_results['mention_in_question'] = {'message_count': 0, }
+        self.expected_results['mention_in_answer'] = {'message_count': 0, }
+        self.expected_results['question_edit'] = {'message_count': 1, }
+        self.expected_results['answer_edit'] = {'message_count': 1, }
+        self.expected_results['question_and_answer_by_target'] = {'message_count': 0, }
+        self.expected_results['q_ans'] = {'message_count': 0, }
+        self.expected_results['q_ans_new_answer'] = {'message_count': 0, }
 
 class BlankInstantSelectedQuestionsEmailAlertTests(EmailAlertTests):
     """blank means that this is testing for the absence of email
@@ -605,6 +620,19 @@ class BlankInstantSelectedQuestionsEmailAlertTests(EmailAlertTests):
     def setUp(self):
         self.notification_schedule['q_sel'] = 'i'
         self.setup_timestamp = datetime.datetime.now() - datetime.timedelta(1)
+        self.expected_results['q_ask'] = {'message_count': 1, }
+        self.expected_results['q_ask_delete_answer'] = {'message_count': 1, }
+        self.expected_results['question_comment'] = {'message_count': 1, }
+        self.expected_results['question_comment_delete'] = {'message_count': 1, }
+        self.expected_results['answer_comment'] = {'message_count': 0, }
+        self.expected_results['answer_delete_comment'] = {'message_count': 0, }
+        self.expected_results['mention_in_question'] = {'message_count': 0, }
+        self.expected_results['mention_in_answer'] = {'message_count': 0, }
+        self.expected_results['question_edit'] = {'message_count': 1, }
+        self.expected_results['answer_edit'] = {'message_count': 1, }
+        self.expected_results['question_and_answer_by_target'] = {'message_count': 0, }
+        self.expected_results['q_ans'] = {'message_count': 0, }
+        self.expected_results['q_ans_new_answer'] = {'message_count': 0, }
 
 class LiveWeeklySelectedQuestionsEmailAlertTests(EmailAlertTests):
     """live means that this is testing for the presence of email
@@ -738,7 +766,7 @@ class FeedbackTests(utils.AskbotTestCase):
         }
         response = client.post(reverse('feedback'), data)
         self.assertEquals(response.status_code, 200)
-        self.assertEquals(response.template.name, 'feedback.html')
+        self.assertEquals(response.templates[0].name, 'feedback.html')
 
     def test_mail_moderators(self):
         """tests askbot.mail_moderators()
@@ -814,7 +842,7 @@ class TagFollowedInstantWholeForumEmailAlertTests(utils.AskbotTestCase):
         )
 
     @with_settings(SUBSCRIBED_TAG_SELECTOR_ENABLED=True)
-    def test_tag_based_subscription_on_new_question_works1(self):
+    def test_tag_based_subscription_on_new_question_works2(self):
         """someone subscribes for an pre-existing tag
         then another user asks a question with that tag
         and the subcriber receives an alert
@@ -1026,9 +1054,9 @@ class PostApprovalTests(utils.AskbotTestCase):
     def setUp(self):
         self.reply_by_email = askbot_settings.REPLY_BY_EMAIL
         askbot_settings.update('REPLY_BY_EMAIL', True)
-        self.enable_content_moderation = \
-            askbot_settings.ENABLE_CONTENT_MODERATION
-        askbot_settings.update('ENABLE_CONTENT_MODERATION', True)
+        self.content_moderation_mode = \
+            askbot_settings.CONTENT_MODERATION_MODE
+        askbot_settings.update('CONTENT_MODERATION_MODE', 'premoderation')
         self.self_notify_when = \
             askbot_settings.SELF_NOTIFY_EMAILED_POST_AUTHOR_WHEN
         when = const.FOR_FIRST_REVISION
@@ -1042,8 +1070,8 @@ class PostApprovalTests(utils.AskbotTestCase):
             'REPLY_BY_EMAIL', self.reply_by_email
         )
         askbot_settings.update(
-            'ENABLE_CONTENT_MODERATION',
-            self.enable_content_moderation
+            'CONTENT_MODERATION_MODE',
+            self.content_moderation_mode
         )
         askbot_settings.update(
             'SELF_NOTIFY_EMAILED_POST_AUTHOR_WHEN',
@@ -1051,8 +1079,8 @@ class PostApprovalTests(utils.AskbotTestCase):
         )
 
     def test_emailed_question_answerable_approval_notification(self):
-        self.u1 = self.create_user('user1', status = 'a')#regular user
-        question = self.post_question(user = self.u1, by_email = True)
+        self.u1 = self.create_user('user1', status='a')#watched user
+        question = self.post_question(user=self.u1, by_email=True)
         outbox = django.core.mail.outbox
         #here we should get just the notification of the post
         #being placed on the moderation queue
@@ -1060,7 +1088,7 @@ class PostApprovalTests(utils.AskbotTestCase):
         self.assertEquals(outbox[0].recipients(), [self.u1.email])
 
     def test_moderated_question_answerable_approval_notification(self):
-        u1 = self.create_user('user1', status = 'a')
+        u1 = self.create_user('user1', status = 'w')
         question = self.post_question(user = u1, by_email = True)
 
         self.assertEquals(question.approved, False)
@@ -1071,7 +1099,7 @@ class PostApprovalTests(utils.AskbotTestCase):
         u2.approve_post_revision(question.get_latest_revision())
 
         outbox = django.core.mail.outbox
-        self.assertEquals(len(outbox), 1)
+        self.assertEquals(len(outbox), 2)
         #moderation notification
         self.assertEquals(outbox[0].recipients(), [u1.email,])
         #self.assertEquals(outbox[1].recipients(), [u1.email,])#approval
@@ -1099,6 +1127,8 @@ class AbsolutizeUrlsInEmailsTests(utils.AskbotTestCase):
         links = soup.find_all('a')
         url_bits = {}
         for link in links:
+            if link.attrs['href'].startswith('mailto:'):
+                continue
             url_bits[link.attrs['href'][:4]] = 1
 
         self.assertEqual(len(url_bits.keys()), 1)
@@ -1115,7 +1145,10 @@ class AbsolutizeUrlsInEmailsTests(utils.AskbotTestCase):
 
 class MailMessagesTests(utils.AskbotTestCase):
     def test_ask_for_signature(self):
-        from askbot.mail import messages
+        from askbot.mail.messages import AskForSignature
         user = self.create_user('user')
-        message = messages.ask_for_signature(user, footer_code = 'nothing')
+        message = AskForSignature({
+                            'user': user,
+                            'footer_code': 'nothing'
+                        }).render_body()
         self.assertTrue(user.username in message)

@@ -1,16 +1,11 @@
 <script type="text/javascript">
     /*<![CDATA[*/
-    askbot['settings']['showSortByRelevance'] = {% if show_sort_by_relevance %}true{% else %}false{% endif %};
     $(document).ready(function(){
         /*var on_tab = '#nav_questions';
         $(on_tab).attr('className','on');*/
         Hilite.exact = false;
         Hilite.elementid = "question-list";
         Hilite.debug_referrer = location.href;
-        {% if update_avatar_data == True %}
-            var today = new Date();{#add timestamp to prevent browser caching #}
-            $.getJSON('{% url user_update_has_custom_avatar %}?t=' + today.getTime());
-        {% endif %}
     });
 
     askbot['urls']['mark_interesting_tag'] = '{% url mark_interesting_tag %}';
@@ -18,6 +13,7 @@
     askbot['urls']['mark_subscribed_tag'] = '{% url mark_subscribed_tag %}';
     askbot['urls']['unmark_tag'] = '{% url unmark_tag %}';
     askbot['urls']['set_tag_filter_strategy'] = '{% url "set_tag_filter_strategy" %}';
+    askbot['settings']['tag_editor'] = '{{ tag_editor_settings|escapejs }}';
 
     if (Modernizr.history) {
         // history management works!
@@ -39,7 +35,7 @@
     }
     /*]]>*/
 </script>
-<script type='text/javascript' src='{{"/js/editor.js"|media}}'></script>
-{% if request.user.is_authenticated() %}
-<script type='text/javascript' src='{{"/js/tag_selector.js"|media}}'></script>
-{% endif %}
+{% compress js %}
+<script type="text/javascript" src="{{ '/jslib/editor.js'|media }}"></script>
+<script type="text/javascript" src="{{ '/js/tag_selector.js'|media }}"></script>
+{% endcompress %}

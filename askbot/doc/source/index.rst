@@ -24,12 +24,16 @@ at the forum_ or by email at admin@askbot.org
    Appendix A: Maintenance procedures <management-commands>
    Appendix B: Sending email to askbot <sending-email-to-askbot>
    Appendix C: Optional modules <optional-modules>
-   Appendix D: Askbot as reusable Django application <askbot-as-reusable-django-application>
-   Appendix E: Customizing skin in askbot <customizing-skin-in-askbot>
-   Appendix F: Intranet setup <intranet-setup>
+   Appendix D: Api <api>
+   Appendix E: Askbot as reusable Django application <askbot-as-reusable-django-application>
+   Appendix F: Customizing skin in askbot <customizing-skin-in-askbot>
+   Appendix G: Intranet setup <intranet-setup>
+   Appendix H: Language support in Askbot <localization>
+   Appendix I: Configuration of text search <text-search>
+   Appendix J: Migration from MySQL to PostgreSQL <mysql-to-postgres>
    Footnotes <footnotes>
    Contributors <contributors>
-   Changelog<changelog>
+   Changelog <changelog>
 
 Some background information: Askbot is written in Python on top of the Django platform.
 Code of Askbot grew out of CNPROG project originally written by 

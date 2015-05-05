@@ -54,17 +54,17 @@ class SearchStateTests(AskbotTestCase):
             user_logged_in=False
         )
         self.assertEqual(
-            'scope:unanswered/sort:age-desc/query:alfa/tags:miki,mini/author:12/page:2/',
+            'scope:unanswered/sort:age-desc/tags:miki,mini/author:12/page:2/query:alfa/',
             ss.query_string()
         )
         self.assertEqual(
-            'scope:unanswered/sort:age-desc/query:alfa/tags:miki,mini/author:12/page:2/',
+            'scope:unanswered/sort:age-desc/tags:miki,mini/author:12/page:2/query:alfa/',
             ss.deepcopy().query_string()
         )
 
     def test_edge_cases_1(self):
         ss = SearchState(
-            scope='favorite', # this is not a valid choice for non-logger users
+            scope='followed', # this is not a valid choice for non-logger users
             sort='age-desc',
             query=' alfa',
             tags='miki, mini',
@@ -74,16 +74,16 @@ class SearchStateTests(AskbotTestCase):
             user_logged_in=False
         )
         self.assertEqual(
-            'scope:all/sort:age-desc/query:alfa/tags:miki,mini/author:12/page:2/',
+            'scope:all/sort:age-desc/tags:miki,mini/author:12/page:2/query:alfa/',
             ss.query_string()
         )
         self.assertEqual(
-            'scope:all/sort:age-desc/query:alfa/tags:miki,mini/author:12/page:2/',
+            'scope:all/sort:age-desc/tags:miki,mini/author:12/page:2/query:alfa/',
             ss.deepcopy().query_string()
         )
 
         ss = SearchState(
-            scope='favorite',
+            scope='followed',
             sort='age-desc',
             query=' alfa',
             tags='miki, mini',
@@ -93,11 +93,11 @@ class SearchStateTests(AskbotTestCase):
             user_logged_in=True
         )
         self.assertEqual(
-            'scope:favorite/sort:age-desc/query:alfa/tags:miki,mini/author:12/page:2/',
+            'scope:followed/sort:age-desc/tags:miki,mini/author:12/page:2/query:alfa/',
             ss.query_string()
         )
         self.assertEqual(
-            'scope:favorite/sort:age-desc/query:alfa/tags:miki,mini/author:12/page:2/',
+            'scope:followed/sort:age-desc/tags:miki,mini/author:12/page:2/query:alfa/',
             ss.deepcopy().query_string()
         )
 
@@ -116,7 +116,7 @@ class SearchStateTests(AskbotTestCase):
             user_logged_in=False
         )
         self.assertEqual(
-            'scope:all/sort:relevance-desc/query:hejho/tags:miki,mini/author:12/page:2/',
+            'scope:all/sort:relevance-desc/tags:miki,mini/author:12/page:2/query:hejho/',
             ss.query_string()
         )
 
@@ -148,7 +148,7 @@ class SearchStateTests(AskbotTestCase):
             user_logged_in=False
         )
         self.assertEqual(
-            'scope:all/sort:activity-desc/query:hejho/tags:miki,mini/author:12/page:2/',
+            'scope:all/sort:activity-desc/tags:miki,mini/author:12/page:2/query:hejho/',
             ss.query_string()
         )
 
@@ -157,7 +157,7 @@ class SearchStateTests(AskbotTestCase):
     def test_query_escaping(self):
         ss = self._ss(query=' alfa miki maki +-%#?= lalala/: ') # query coming from URL is already unescaped
 
-        qs = 'scope:all/sort:activity-desc/query:alfa%20miki%20maki%20+-%25%23%3F%3D%20lalala%2F%3A/page:1/'
+        qs = 'scope:all/sort:activity-desc/page:1/query:alfa%20miki%20maki%20+-%25%23%3F%3D%20lalala%2F%3A/'
         self.assertEqual(qs, ss.query_string())
         self.assertEqual(qs, ss.deepcopy().query_string())
 
@@ -180,7 +180,7 @@ class SearchStateTests(AskbotTestCase):
         self.assertEqual(ss.stripped_query, ss.deepcopy().stripped_query)
 
         self.assertEqual(
-            'scope:all/sort:activity-desc/query:%22%40anna%20haha%20%40%22maria%20fernanda%22%20%40%27diego%20maradona%27%20hehe%20%5Buser%3Akarl%20%20marx%5D%20hoho%20%20user%3A%27%20george%20bush%20%20%27/page:1/',
+            'scope:all/sort:activity-desc/page:1/query:%22%40anna%20haha%20%40%22maria%20fernanda%22%20%40%27diego%20maradona%27%20hehe%20%5Buser%3Akarl%20%20marx%5D%20hoho%20%20user%3A%27%20george%20bush%20%20%27/',
             ss.query_string()
         )
 

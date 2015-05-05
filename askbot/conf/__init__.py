@@ -6,8 +6,10 @@ import askbot.conf.vote_rules
 import askbot.conf.reputation_changes
 import askbot.conf.karma_and_badges_visibility
 import askbot.conf.email
+import askbot.conf.email_text
 import askbot.conf.forum_data_rules
 import askbot.conf.moderation
+import askbot.conf.question_lists
 import askbot.conf.flatpages
 import askbot.conf.site_settings
 import askbot.conf.license
@@ -21,12 +23,14 @@ import askbot.conf.leading_sidebar
 import askbot.conf.spam_and_moderation
 import askbot.conf.user_settings
 import askbot.conf.group_settings
+import askbot.conf.feedback
 import askbot.conf.markup
 import askbot.conf.social_sharing
 import askbot.conf.badges
 import askbot.conf.login_providers
 import askbot.conf.access_control
 import askbot.conf.site_modes
+import askbot.conf.words
 
 #import main settings object
 from askbot.conf.settings_wrapper import settings
@@ -52,3 +56,9 @@ def get_tag_email_filter_strategy_choices():
         return const.TAG_EMAIL_FILTER_ADVANCED_STRATEGY_CHOICES
     else:
         return const.TAG_EMAIL_FILTER_SIMPLE_STRATEGY_CHOICES
+
+def gravatar_enabled():
+    from askbot.conf import settings as askbot_settings
+    if 'avatar' in django_settings.INSTALLED_APPS:
+        return askbot_settings.ENABLE_GRAVATAR
+    return True

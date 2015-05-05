@@ -6,6 +6,7 @@ python manage.py fix_answer_counts
 from django.core.management.base import NoArgsCommand
 from django.db.models import signals
 from askbot import models
+from askbot.utils.console import ProgressBar
 
 class Command(NoArgsCommand):
     """Command class for "fix_answer_counts" 
@@ -23,5 +24,8 @@ class Command(NoArgsCommand):
         """function that handles the command job
         """
         self.remove_save_signals()
-        for thread in models.Thread.objects.all():
+        threads = models.Thread.objects.all()
+        count = threads.count()
+        message = 'Fixing answer counts'
+        for thread in ProgressBar(threads.iterator(), count, message):
             thread.update_answer_count()

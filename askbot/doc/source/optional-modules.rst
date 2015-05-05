@@ -71,6 +71,11 @@ To enable:
 * add ENABLE_HAYSTACK_SEARCH = True in settings.py 
 * Configure your search backend according to your setup following `this guide <http://django-haystack.readthedocs.org/en/latest/tutorial.html#modify-your-settings-py>`_
 
+Solr and  Multilingual Support
+-------------------------
+
+There is more documentation about solr and multilingual support  please visit :ref:`this link <solr>`
+
 Embedding video
 ===============
 
@@ -182,10 +187,9 @@ Uploaded avatars
 ================
 
 To enable uploadable avatars (in addition to :ref:`gravatars <gravatar>`), 
-please install development version of
-application ``django-avatar``, with the following command::
-
-    pip install -e git+git://github.com/ericflo/django-avatar.git#egg=django-avatar
+please install application ``django-avatar``, with the following command::
+    
+    pip install django-avatar
 
 Then add ``avatar`` to the list of ``INSTALLED_APPS`` in your ``settings.py`` file 
 and run (to install database table used by the avatar app):

@@ -13,7 +13,7 @@
     </thead>
     <tbody>
         <tr>
-            <td>{% trans %}Ask a question{% endtrans %}</td>
+            <td>"{{ settings.WORDS_ASK_YOUR_QUESTION|escape }}"</td>
             <td><a href="{% url create_widget 'ask' %}">{% trans %}create{% endtrans %}</a></td>
             <td>
                 {% if ask_widgets > 0 %}
@@ -22,7 +22,7 @@
             </td>
         </tr>
         <tr>
-            <td>{% trans %}List of questions{% endtrans %}</td>
+        <td>{{ settings.WORDS_LIST_OF_QUESTIONS|escape }}</td>
             <td><a href="{% url create_widget 'question' %}">{% trans %}create{% endtrans %}</a></td>
             <td>
                 {% if question_widgets > 0 %}

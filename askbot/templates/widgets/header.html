@@ -7,6 +7,9 @@
     <div class="content-wrapper">
         <div id="userToolsNav">
             {% include "widgets/user_navigation.html" %}
+            {% if settings.MULTILINGUAL %}
+                {% include "widgets/language_nav.html" %}
+            {% endif %}
         </div>
         {% if settings.SHOW_LOGO %}
             {% include "widgets/logo.html" %}
@@ -16,5 +19,10 @@
         </div>
         <div class="clean"></div>
     </div>
+    {% if settings.READ_ONLY_MODE_ENABLED %}
+        <div class="content-wrapper system-messages">
+            {{ settings.READ_ONLY_MESSAGE }}
+        </div>
+    {% endif %}
 </div>
 <!-- end template header.html -->

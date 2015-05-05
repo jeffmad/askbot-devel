@@ -19,6 +19,7 @@ settings.register(
     )
 )
 
+"""
 def group_name_update_callback(old_name, new_name):
     from askbot.models.tag import clean_group_name
     from askbot.models import Group
@@ -32,6 +33,7 @@ def group_name_update_callback(old_name, new_name):
     group.name = cleaned_new_name
     group.save()
     return new_name
+"""
 
 
 settings.register(
@@ -41,7 +43,7 @@ settings.register(
         default = _('everyone'),
         description = _('Global user group name'),
         help_text = _('All users belong to this group automatically'),
-        update_callback=group_name_update_callback
+        #update_callback=group_name_update_callback
     )
 )
 

@@ -1,3 +1,4 @@
+import sys
 from askbot.conf import settings as askbot_settings
 from askbot.models import User
 from askbot.utils.console import choice_dialog
@@ -17,7 +18,10 @@ NUM_COMMENTS = 20
 # karma. This can be calculated dynamically - max of MIN_REP_TO_... settings
 INITIAL_REPUTATION = 500
 
-BAD_STUFF = "<script>alert('hohoho')</script>"
+if '--nospam' in sys.argv:
+    BAD_STUFF = ''
+else:
+    BAD_STUFF = "<script>alert('hohoho')</script>"
 
 # Defining template inputs.
 USERNAME_TEMPLATE = BAD_STUFF + "test_user_%s"
@@ -47,23 +51,34 @@ ALERT_SETTINGS_KEYS = (
 
 class Command(NoArgsCommand):
     option_list = NoArgsCommand.option_list + (
-        make_option('--noinput', action='store_false', dest='interactive', default=True,
-            help='Do not prompt the user for input of any kind.'),
+        make_option(
+            '--noinput', action='store_false', dest='interactive', default=True,
+            help='Do not prompt the user for input of any kind.'
+        ),
+        make_option(
+            '--nospam', action='store_true', dest='nospam', default=False,
+            help='Do not add XSS snippets'
+        )
     )
 
-    def save_alert_settings(self):
+    def backup_settings(self):
         settings = {}
         for key in ALERT_SETTINGS_KEYS:
             settings[key] = getattr(askbot_settings, key)
         self.alert_settings = settings
+        self.limit_on_answer_setting = askbot_settings.LIMIT_ONE_ANSWER_PER_USER
 
-    def stop_alerts(self):
+
+    def modify_settings(self):
         for key in ALERT_SETTINGS_KEYS:
             askbot_settings.update(key, 'n')
+        askbot_settings.update('LIMIT_ONE_ANSWER_PER_USER', False)
 
-    def restore_saved_alert_settings(self):
+    def restore_settings(self):
         for key in ALERT_SETTINGS_KEYS:
             askbot_settings.update(key, self.alert_settings[key])
+        value = self.limit_on_answer_setting
+        askbot_settings.update('LIMIT_ONE_ANSWER_PER_USER', value)
 
     def print_if_verbose(self, text):
         "Only print if user chooses verbose output"
@@ -111,7 +126,7 @@ class Command(NoArgsCommand):
         last_vote = False
         # Each user posts a question
         for i in range(NUM_QUESTIONS):
-            user = users[i]
+            user = users[i % len(users)]#allows to post many questions all by less users
             # Downvote/upvote the questions - It's reproducible, yet
             # gives good randomized data
             if not active_question is None:
@@ -154,7 +169,8 @@ class Command(NoArgsCommand):
         active_answer = None
         last_vote = False
         # Now, fill the last added question with answers
-        for user in users[:NUM_ANSWERS]:
+        for i in range(NUM_ANSWERS):
+            user = users[i % len(users)]
             # We don't need to test for data validation, so ONLY users
             # that aren't authors can post answer to the question
             if not active_question.author is user:
@@ -203,7 +219,8 @@ class Command(NoArgsCommand):
         active_question_comment = None
         active_answer_comment = None
 
-        for user in users[:NUM_COMMENTS]:
+        for i in range(NUM_COMMENTS):
+            user = users[i % len(users)]
             active_question_comment = user.post_comment(
                                     parent_post = active_question,
                                     body_text = COMMENT_TEMPLATE
@@ -232,6 +249,8 @@ class Command(NoArgsCommand):
         self.verbosity = int(options.get("verbosity", 1))
         self.interactive = options.get("interactive")
 
+        # post a bunch of answers by admin now - that active_question is
+        # posted by someone else
         if self.interactive:
             answer = choice_dialog("This command will DELETE ALL DATA in the current database, and will fill the database with test data. Are you absolutely sure you want to proceed?",
                             choices = ("yes", "no", ))
@@ -239,15 +258,20 @@ class Command(NoArgsCommand):
                 return
 
         translation.activate(django_settings.LANGUAGE_CODE)
-
-        self.save_alert_settings()
-        self.stop_alerts()# saves time on running the command
+        self.backup_settings()
+        self.modify_settings()# saves time on running the command
 
         # Create Users
         users = self.create_users()
 
-        # Create Questions, vote for questions
+        # Create a bunch of questions and answers by a single user
+        # to test pagination in the user profile
+        active_question = self.create_questions(users[0:1])
+
+        # Create Questions, vote for questions by all other users
         active_question = self.create_questions(users)
+
+        active_answer = self.create_answers(users[0:1], active_question)
 
         # Create Answers, vote for the answers, vote for the active question
         # vote for the active answer
@@ -292,7 +316,5 @@ class Command(NoArgsCommand):
                             force = True,
                         )
         self.print_if_verbose("User has accepted a best answer")
-
-        self.restore_saved_alert_settings()
-
+        self.restore_settings()
         self.print_if_verbose("DONE")

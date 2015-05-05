@@ -17,6 +17,16 @@ MIN_REP = livesettings.ConfigurationGroup(
 settings.register(
     livesettings.IntegerValue(
         MIN_REP,
+        'MIN_REP_TO_AUTOAPPROVE_USER',
+        default=10,
+        description=_('Become approved'),
+        help_text=_('Approved users bypass moderation and skip recaptcha')
+    )
+)
+
+settings.register(
+    livesettings.IntegerValue(
+        MIN_REP,
         'MIN_REP_TO_VOTE_UP',
         default=5,
         description=_('Upvote')
@@ -68,6 +78,8 @@ settings.register(
     )
 )
 
+"""
+#this is disabled to possibly be completely removed later
 settings.register(
     livesettings.IntegerValue(
         MIN_REP,
@@ -76,6 +88,7 @@ settings.register(
         description=_('Leave comments')
     )
 )
+"""
 
 settings.register(
     livesettings.IntegerValue(
@@ -98,6 +111,15 @@ settings.register(
 settings.register(
     livesettings.IntegerValue(
         MIN_REP,
+        'MIN_REP_TO_DELETE_OWN_QUESTIONS',
+        default=1,
+        description=_('Delete own questions')
+    )
+)
+
+settings.register(
+    livesettings.IntegerValue(
+        MIN_REP,
         'MIN_REP_TO_UPLOAD_FILES',
         default=10,
         description=_('Upload files')
@@ -108,7 +130,7 @@ settings.register(
     livesettings.IntegerValue(
         MIN_REP,
         'MIN_REP_TO_INSERT_LINK',
-        default=30,
+        default=1,
         description=_('Insert clickable links')
     )
 )
@@ -117,7 +139,7 @@ settings.register(
     livesettings.IntegerValue(
         MIN_REP,
         'MIN_REP_TO_SUGGEST_LINK',
-        default=10,
+        default=1,
         description=_('Insert link suggestions as plain text'),
         help_text=_(
             'This value should be smaller than that for "insert clickable links". '
@@ -129,27 +151,9 @@ settings.register(
 settings.register(
     livesettings.IntegerValue(
         MIN_REP,
-        'MIN_REP_TO_CLOSE_OWN_QUESTIONS',
-        default=25,
-        description=_('Close own questions'),
-    )
-)
-
-settings.register(
-    livesettings.IntegerValue(
-        MIN_REP,
         'MIN_REP_TO_RETAG_OTHERS_QUESTIONS',
         default=50,
         description=_('Retag questions posted by other people')
-    )
-)
-
-settings.register(
-    livesettings.IntegerValue(
-        MIN_REP,
-        'MIN_REP_TO_REOPEN_OWN_QUESTIONS',
-        default=50,
-        description=_('Reopen own questions')
     )
 )
 
@@ -185,16 +189,7 @@ settings.register(
         MIN_REP,
         'MIN_REP_TO_CLOSE_OTHERS_QUESTIONS',
         default=200,
-        description=_('Close questions asked by others')
-    )
-)
-
-settings.register(
-    livesettings.IntegerValue(
-        MIN_REP,
-        'MIN_REP_TO_LOCK_POSTS',
-        default=400,
-        description=_('Lock posts')
+        description=_('Close and reopen questions')
     )
 )
 
@@ -217,7 +212,7 @@ settings.register(
         MIN_REP,
         'MIN_REP_TO_POST_BY_EMAIL',
         default=100,
-        description=_('Post answers and comments by email')
+        description=_('Make posts by email')
     )
 )
 
@@ -227,9 +222,16 @@ settings.register(
         'MIN_REP_TO_TRIGGER_EMAIL',
         default=15,
         description=_('Trigger email notifications'),
-        help_text=_(
-            'Reduces spam as notifications wont\'t be sent '
-            'to regular users for posts of low karma users'
-        )
+        help_text=_('Reduces spam')
+    )
+)
+
+settings.register(
+    livesettings.IntegerValue(
+        MIN_REP,
+        'MIN_REP_TO_TWEET_ON_OTHERS_ACCOUNTS',
+        default=15,
+        description=_('Trigger tweets on others accounts'),
+        help_text=_('Reduces spam')
     )
 )

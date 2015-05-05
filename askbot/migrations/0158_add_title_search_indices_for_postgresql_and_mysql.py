@@ -23,14 +23,16 @@ class Migration(DataMigration):
                 columns = ('title', 'tagnames')
                 sql = get_create_full_text_index_sql(INDEX_NAME, table_name, columns)
                 db.execute(sql)
-        elif db.backend_name == 'postgres':
-            script_path = os.path.join(
-                                askbot.get_install_directory(),
-                                'search',
-                                'postgresql',
-                                'thread_and_post_models_27112012.plsql'
-                            )
-            postgresql.setup_full_text_search(script_path)
+        #commented this out because this migration fails on real data!!!
+        #the subseqent migrations 163 and 165 take care of this anyway
+        #elif db.backend_name == 'postgres':
+        #    script_path = os.path.join(
+        #                        askbot.get_install_directory(),
+        #                        'search',
+        #                        'postgresql',
+        #                        'thread_and_post_models_27112012.plsql'
+        #                    )
+        #    postgresql.setup_full_text_search(script_path)
 
     def backwards(self, orm):
         "Write your backwards methods here."

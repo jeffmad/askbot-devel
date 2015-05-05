@@ -1,7 +1,7 @@
 {% import "macros.html" as macros %}
 {% if questions_count > 0 %}
         <h1 id="questionCount" class="search-result-summary">
-            {% trans cnt=questions_count, q_num=questions_count|intcomma %}{{q_num}} question{% pluralize %}{{q_num}} questions{% endtrans %}
+            {{ questions_count|intcomma }} {{ settings.WORDS_QUESTIONS_COUNTABLE_FORMS|py_pluralize(questions_count) }}
         {% if author_name %}
             {% trans %}with {{author_name}}'s contributions{% endtrans %}
         {% endif %}

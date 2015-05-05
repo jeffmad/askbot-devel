@@ -9,7 +9,7 @@ from django.utils.encoding import StrAndUnicode
 
 from askbot.user_messages import get_and_delete_messages
 
-def user_messages (request):
+def user_messages(request):
     """
     Returns session messages for the current session.
 
@@ -18,16 +18,19 @@ def user_messages (request):
         #todo: a hack, for real we need to remove this middleware
         #and switch to the new-style session messages
         return {}
-    messages = request.user.get_and_delete_messages()
-    #if request.user.is_authenticated():
-    #else:
-    #    messages = LazyMessages(request)
-    #import inspect
-    #print inspect.stack()[1]
-    #print messages
-    return { 'user_messages': messages }
 
-class LazyMessages (StrAndUnicode):
+    #the get_and_delete_messages is added to anonymous user by the
+    #ConnectToSessionMessages middleware by the process_request,
+    #however - if the user is logging out via /admin/logout/
+    #the AnonymousUser is installed in the response and thus 
+    #the Askbot's session messages hack will fail, so we have
+    #an extra if statement here.
+    if hasattr(request.user, 'get_and_delete_messages'):
+        messages = request.user.get_and_delete_messages()
+        return { 'user_messages': messages }
+    return {}
+
+class LazyMessages(StrAndUnicode):
     """
     Lazy message container, so messages aren't actually retrieved from
     session and deleted until the template asks for them.

@@ -20,6 +20,14 @@ def patch_django():
     if major == 1 and minor <=2:
         django_patches.add_render_shortcut()
 
+    if major == 1 and minor > 4:
+        # This shouldn't be required with django < 1.4.x
+        # And not after kee_lazy lands in django.utils.functional
+        try:
+            from django.utils.functional import keep_lazy
+        except ImportError:
+            django_patches.fix_lazy_double_escape()
+
 def patch_coffin():
     """coffin before version 0.3.4
     does not have csrf_token template tag.

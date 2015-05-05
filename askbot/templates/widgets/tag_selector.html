@@ -14,6 +14,7 @@
         "remove '%(tag_name)s' from the list of interesting tags"|
         format(tag_name = tag_name)
     #}
+    <div class="clearfix"></div>
     <div class="inputs">
         <input id="interestingTagInput" autocomplete="off" type="text"/>
         <input id="interestingTagAdd" type="submit" value="{% trans %}add{% endtrans %}"/>
@@ -49,12 +50,13 @@
             "remove '%(tag_name)s' from the list of ignored tags"|
             format(tag_name = tag_name)
         #}
+        <div class="clearfix"></div>
         <div class="inputs">
             <input id="subscribedTagInput" autocomplete="off" type="text"/>
             <input id="subscribedTagAdd" type="submit" value="{% trans %}add{% endtrans%}"/>
         </div>
     {% endif %}
-    <h3>{% trans %}Show only questions from{% endtrans%}</h3>
+    <h3>{{ settings.WORDS_SHOW_ONLY_QUESTIONS_FROM|escape }}</h3>
     <div id="displayTagFilterControl">
         {{
             macros.radio_select(

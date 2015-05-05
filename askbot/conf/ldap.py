@@ -10,20 +10,12 @@ LDAP_SETTINGS = livesettings.ConfigurationGroup(
                     super_group = EXTERNAL_SERVICES
                 )
 
-def enable_ldap_callback(current_value, new_value):
-    """enables local login form when ldap is on"""
-    if new_value == True:
-        settings.update('SIGNIN_LOCAL_ENABLED', True)
-
-    return new_value
-
 settings.register(
     livesettings.BooleanValue(
         LDAP_SETTINGS,
         'USE_LDAP_FOR_PASSWORD_LOGIN',
         description=_('Use LDAP authentication for the password login'),
-        defaut=False,
-        update_callback=enable_ldap_callback
+        defaut=False
     )
 )
 
@@ -91,7 +83,7 @@ settings.register(
         default = '',
         help_text = _(
             'Usually base DN mirrors domain name of your organization, '
-            'e.g. "dn=example,dn=com" when your site url is "example.com".'
+            'e.g. "dn=example,dn=com" when your site url is "example.com". '
             'This value is the "root" address of your LDAP directory.'
         )
     )

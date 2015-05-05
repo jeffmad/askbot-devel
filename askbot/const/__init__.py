@@ -7,6 +7,7 @@ text in this project, all unicode text go here.
 from django.utils.translation import ugettext_lazy as _
 import re
 
+#todo: customize words
 CLOSE_REASONS = (
     (1, _('duplicate question')),
     (2, _('question is off-topic or not relevant')),
@@ -21,6 +22,15 @@ CLOSE_REASONS = (
 
 LONG_TIME = 60*60*24*30 #30 days is a lot of time
 DATETIME_FORMAT = '%I:%M %p, %d %b %Y'
+
+SHARE_NOTHING = 0
+SHARE_MY_POSTS = 1
+SHARE_EVERYTHING = 2
+SOCIAL_SHARING_MODE_CHOICES = (
+    (SHARE_NOTHING, _('disable sharing')),
+    (SHARE_MY_POSTS, _('my posts')),
+    (SHARE_EVERYTHING, _('all posts'))
+)
 
 TYPE_REPUTATION = (
     (1, 'gain_by_upvoted'),
@@ -101,18 +111,37 @@ REPLY_WITH_COMMENT_TEMPLATE = _(
 )
 REPLY_SEPARATOR_REGEX = re.compile(r'==== .* -=-==', re.MULTILINE|re.DOTALL)
 
-ANSWER_SORT_METHODS = (#no translations needed here
-    'latest', 'oldest', 'votes'
+ANSWER_SORT_METHODS = (
+    ('latest' , _('latest first')),
+    ('oldest', _('oldest first')),
+    ('votes', _('most voted first')),
 )
+DEFAULT_ANSWER_SORT_METHOD = 'votes'
+
+TAGS_SORT_METHODS = (
+    ('used', _('sorted by frequency of tag use')),
+    ('name', _('sorted alphabetically'))
+)
+DEFAULT_TAGS_SORT_METHOD = 'used'
+
+USER_SORT_METHODS = (
+    ('reputation', _('see people with the highest reputation')),
+    ('newest', _('see people who joined most recently')),
+    ('last', _('see people who joined the site first')),
+    ('name', _('see people sorted by name'))
+)
+DEFAULT_USER_SORT_METHOD = 'reputation'
+
 #todo: add assertion here that all sort methods are unique
 #because they are keys to the hash used in implementations
 #of Q.run_advanced_search
 
 DEFAULT_POST_SORT_METHOD = 'activity-desc'
+#todo: customize words
 POST_SCOPE_LIST = (
     ('all', _('all')),
     ('unanswered', _('unanswered')),
-    ('favorite', _('favorite')),
+    ('followed', _('followed')),
 )
 DEFAULT_POST_SCOPE = 'all'
 
@@ -123,6 +152,7 @@ TAG_LIST_FORMAT_CHOICES = (
 
 PAGE_SIZE_CHOICES = (('10', '10',), ('30', '30',), ('50', '50',),)
 ANSWERS_PAGE_SIZE = 10
+USER_POSTS_PAGE_SIZE = 10
 QUESTIONS_PER_PAGE_USER_CHOICES = ((10, u'10'), (30, u'30'), (50, u'50'),)
 
 UNANSWERED_QUESTION_MEANING_CHOICES = (
@@ -141,11 +171,16 @@ UNANSWERED_QUESTION_MEANING_CHOICES = (
 #to do full string match
 #IMPRTANT: tag related regexes must be portable between js and python
 TAG_CHARS = r'\w+.#-'
-TAG_REGEX_BARE = r'[%s]+' % TAG_CHARS
+TAG_FIRST_CHARS = r'\w'
+TAG_FORBIDDEN_FIRST_CHARS = r'#'
+TAG_REGEX_BARE = r'%s[%s]+' % (TAG_FIRST_CHARS, TAG_CHARS)
 TAG_REGEX = r'^%s$' % TAG_REGEX_BARE
-TAG_SPLIT_REGEX = r'[ ,]+'
+
+TAG_STRIP_CHARS = ', '
+TAG_SPLIT_REGEX = r'[%s]+' % TAG_STRIP_CHARS
 TAG_SEP = ',' # has to be valid TAG_SPLIT_REGEX char and MUST NOT be in const.TAG_CHARS
 #!!! see const.message_keys.TAG_WRONG_CHARS_MESSAGE
+
 EMAIL_REGEX = re.compile(r'\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}\b', re.I)
 
 TYPE_ACTIVITY_ASK_QUESTION = 1
@@ -178,6 +213,8 @@ TYPE_ACTIVITY_UPDATE_REJECT_REASON = 27
 TYPE_ACTIVITY_VALIDATION_EMAIL_SENT = 28
 TYPE_ACTIVITY_POST_SHARED = 29
 TYPE_ACTIVITY_ASK_TO_JOIN_GROUP = 30
+TYPE_ACTIVITY_MODERATION_ALERT_SENT = 31
+TYPE_ACTIVITY_FORBIDDEN_PHRASE_FOUND = 50 #added gap
 #TYPE_ACTIVITY_EDIT_QUESTION = 17
 #TYPE_ACTIVITY_EDIT_ANSWER = 18
 
@@ -236,7 +273,17 @@ TYPE_ACTIVITY = (
         TYPE_ACTIVITY_VALIDATION_EMAIL_SENT,
         'sent email address validation message'#don't translate, internal
     ),
+    (
+        TYPE_ACTIVITY_MODERATION_ALERT_SENT,
+        'sent moderation alert'#don't translate, internal
+    )
 )
+
+MODERATED_EDIT_ACTIVITY_TYPES = (
+    TYPE_ACTIVITY_MODERATED_NEW_POST,
+    TYPE_ACTIVITY_MODERATED_POST_EDIT
+)
+MODERATED_ACTIVITY_TYPES = MODERATED_EDIT_ACTIVITY_TYPES + (TYPE_ACTIVITY_MARK_OFFENSIVE,)
 
 
 #MENTION activity is added implicitly, unfortunately
@@ -287,13 +334,6 @@ assert(
     == set(RESPONSE_ACTIVITY_TYPE_MAP_FOR_TEMPLATES.keys())
 )
 
-TYPE_RESPONSE = {
-    'QUESTION_ANSWERED' : _('answered question'),
-    'QUESTION_COMMENTED': _('commented question'),
-    'ANSWER_COMMENTED'  : _('commented answer'),
-    'ANSWER_ACCEPTED'   : _('accepted answer'),
-}
-
 POST_STATUS = {
     'closed': _('[closed]'),
     'deleted': _('[deleted]'),
@@ -302,7 +342,93 @@ POST_STATUS = {
     'private': _('[private]')
 }
 
-#choices used in email and display filters
+# codes used in the askbot.views.commands.vote view
+VOTE_ACCEPT_ANSWER = '0'
+VOTE_FAVORITE = '4'
+
+VOTE_UPVOTE_QUESTION, VOTE_DOWNVOTE_QUESTION = '1', '2'
+VOTE_UPVOTE_ANSWER, VOTE_DOWNVOTE_ANSWER = '5', '6'
+
+VOTE_REPORT_QUESTION = '7'
+VOTE_CANCEL_REPORT_QUESTION = '7.5'
+VOTE_CANCEL_REPORT_QUESTION_ALL = '7.6'
+
+VOTE_REPORT_ANSWER = '8'
+VOTE_CANCEL_REPORT_ANSWER = '8.5'
+VOTE_CANCEL_REPORT_ANSWER_ALL = '8.6'
+
+VOTE_REMOVE_QUESTION, VOTE_REMOVE_ANSWER = '9', '10'
+#VOTE_SUBSCRIBE_QUESTION, VOTE_UNSUBSCRIBE_QUESTION = '11', '12'
+
+# list of vote commands to manage posts voting
+VOTE_TYPES_VOTING = (
+    VOTE_UPVOTE_QUESTION,
+    VOTE_DOWNVOTE_QUESTION,
+    VOTE_UPVOTE_ANSWER,
+    VOTE_DOWNVOTE_ANSWER,
+)
+
+# list of vote commands to manage posts flagging
+VOTE_TYPES_REPORTING = (
+    VOTE_REPORT_QUESTION,
+    VOTE_CANCEL_REPORT_QUESTION,
+    VOTE_CANCEL_REPORT_QUESTION_ALL,
+    VOTE_REPORT_ANSWER,
+    VOTE_CANCEL_REPORT_ANSWER,
+    VOTE_CANCEL_REPORT_ANSWER_ALL,
+)
+
+# list of vote commands which cause post deletion
+VOTE_TYPES_REMOVAL = (
+    VOTE_REMOVE_QUESTION,
+    VOTE_REMOVE_ANSWER,
+)
+
+# list of vote commands which shall cause the thread cache to be invalidated
+VOTE_TYPES_INVALIDATE_CACHE = (
+    VOTE_ACCEPT_ANSWER,
+    VOTE_REPORT_QUESTION,
+    VOTE_CANCEL_REPORT_QUESTION,
+    VOTE_CANCEL_REPORT_QUESTION_ALL,
+    VOTE_REPORT_ANSWER,
+    VOTE_CANCEL_REPORT_ANSWER,
+    VOTE_CANCEL_REPORT_ANSWER_ALL,
+    VOTE_REMOVE_QUESTION,
+    VOTE_REMOVE_ANSWER,
+)
+
+# mapping of VOTE commands to command specific arguments in the form:
+#
+#    (post_type, *command_specific_args)
+#
+VOTE_TYPES = {
+    VOTE_ACCEPT_ANSWER: ('answer', ),
+
+    VOTE_FAVORITE: None,  # TODO: not handled in the view
+
+    # args: (post_type, vote_directiom)
+    VOTE_UPVOTE_QUESTION: ('question', 'up'),
+    VOTE_DOWNVOTE_QUESTION: ('question', 'down'),
+    VOTE_UPVOTE_ANSWER: ('answer', 'up'),
+    VOTE_DOWNVOTE_ANSWER: ('answer', 'down'),
+
+    # args: (post_type, cancel, cancel_all)
+    VOTE_REPORT_QUESTION: ('question', False, False),
+    VOTE_CANCEL_REPORT_QUESTION: ('question', True, False),
+    VOTE_CANCEL_REPORT_QUESTION_ALL: ('question', False, True),
+    VOTE_REPORT_ANSWER: ('answer', False, False),
+    VOTE_CANCEL_REPORT_ANSWER: ('answer', True, False),
+    VOTE_CANCEL_REPORT_ANSWER_ALL: ('answer', False, True),
+
+    VOTE_REMOVE_QUESTION: ('question', ),
+    VOTE_REMOVE_ANSWER: ('answer', ),
+
+    #VOTE_SUBSCRIBE_QUESTION: ('question', ),
+    #VOTE_UNSUBSCRIBE_QUESTION: ('question', ),
+}
+
+
+# choices used in email and display filters
 INCLUDE_ALL = 0
 EXCLUDE_IGNORED = 1
 INCLUDE_INTERESTING = 2
@@ -360,8 +486,7 @@ COMMENT_HARD_MAX_LENGTH = 2048
 
 #user status ch
 USER_STATUS_CHOICES = (
-        #in addition to these there is administrator
-        #admin status is determined by the User.is_superuser() call
+        ('d', _('administrator')), #admin = moderator + access to settings
         ('m', _('moderator')), #user with moderation privilege
         ('a', _('approved')), #regular user
         ('w', _('watched')), #regular user placed on the moderation watch
@@ -389,6 +514,7 @@ DEPENDENCY_URLS = {
     'mathjax': 'http://www.mathjax.org/resources/docs/?installation.html',
     'recaptcha': 'http://google.com/recaptcha',
     'twitter-apps': 'http://dev.twitter.com/apps/',
+    'mediawiki-oauth-extension': 'https://www.mediawiki.org/wiki/Extension:OAuth'
 }
 
 PASSWORD_MIN_LENGTH = 8
@@ -410,21 +536,15 @@ BADGE_DISPLAY_SYMBOL = '&#9679;'
 
 MIN_REPUTATION = 1
 
-AVATAR_STATUS_CHOICE = (
-    ('n', _('None')),
-    ('g', _('Gravatar')),#only if user has real uploaded gravatar
-    ('a', _('Uploaded Avatar')),#avatar uploaded locally - with django-avatar app
-)
-
 SEARCH_ORDER_BY = (
                     ('-added_at', _('date descendant')),
                     ('added_at', _('date ascendant')),
-                    ('-last_activity_at', _('activity descendant')),
-                    ('last_activity_at', _('activity ascendant')),
-                    ('-answer_count', _('answers descendant')),
-                    ('answer_count', _('answers ascendant')),
-                    ('-points', _('votes descendant')),
-                    ('points', _('votes ascendant')),
+                    ('-last_activity_at', _('most recently active')),
+                    ('last_activity_at', _('least recently active')),
+                    ('-answer_count', _('more responses')),
+                    ('answer_count', _('fewer responses')),
+                    ('-points', _('more votes')),
+                    ('points', _('less votes')),
                   )
 
 DEFAULT_QUESTION_WIDGET_STYLE = """

@@ -1,13 +1,104 @@
 Changes in Askbot
 =================
 
-Development version
--------------------
+Development version (not released)
+----------------------------------
+* Added management command `askbot_rebuild_avatars`
+
+0.7.53 (Apr 22, 2015)
+---------------------
+* Use prompt placeholders on all registration forms
+* Disable Google login by default because it is now OAuth2
+
+
+0.7.52 (Apr 19, 2015)
+---------------------
+* Added account recovery form to the "complete registration" page
+  to help prevent accidental creation of duplicate accounts
+* Support migration of Google OpenID accounts to G+
+* Added setting to allow comment updates show on the main page
+* Improved support of uploadable avatars
+* Added authentication via MediaWiki
+* Added option to specify `ASKBOT_QUESTION_TITLE_RENDERER` function
+* Added option to specify `ASKBOT_HTML_MODERATOR` function
+* Allowed reordering badges on the badges page via drag and drop
+* Added option to forbid commenting in closed questions
+* Added separate optional time limits to edit questions and answers
+* Added option to disable comments under questions or answers
+* Added management command `askbot_recount_badges`
+* Allowed adding custom badges via `ASKBOT_CUSTOM_BADGES` setting
+* Allowed enabling and disabling individual badges
+* Added "forbidden phrases" for the content moderation
+  Posts containing these will be rejected outright, without placement
+  on the moderation queue.
+* Added minimum reputation to delete own questions with answers
+* Added optional checkbox "accept terms of service"
+  which being enabled, requires users to read and agree
+  with the terms before signing up.
+* Added terms of service page
+* Allowed reverse ordering of comments
+
+0.7.51 (Dec 15, 2014)
+---------------------
+* Bug fixes
+
+0.7.50 (Nov 1, 2014)
+--------------------
+* Added email alert for moderators `askbot_send_moderation_alerts`
+* Implemented Google Plus login
+* Allowed localized site settings
+* Added management command `askbot_clear_moderation_queue`
+* Admins and Moderators can merge questions.
+* Improved moderation modes: flags, audit, premoderation. 
+  Watched user status, IP blocking, mass content removal.
+* Allow bulk deletion of user content simultaneously with blocking
+* Allow custom destination url under the logo
+* Option to allow asking without registration (Egil Moeller)
+* Implemented Mozilla Persona authentication
+* Allowed custom providers of gravatar service (michas2)
+* Allowed configurable custom OpenID login button
+* Allowed custom list of feedback recipients (Keto)
+* Added option to show user's emails to the moderators
+* Added Read-Only mode for the site in the "access control" section.
+* Added `askbot_add_osqa_content` management command.
+* Management command to add data from other Askbot site.
+* Allowed simple overrides of livesettings with `ASKBOT_...` prefixed 
+  variables in the `settings.py` file.
+
+0.7.49 (Sep 19, 2013)
+---------------------
+* Support for Solr search backend (Adolfo)
+* Allowed read-only access user groups (Adolfo)
+* Added simple read-only API (Adolfo)
+* Added "admin email" to livesettings (Evgeny)
+* Improved Zendesk import feature `Kevin Porterfield, Shotgun Software<http://www.shotgunsoftware.com>_`
+* Added backend support for the tag synonyms `pcompassion https://github.com/pcompassion`_
+* Added management command `apply_hinted_tags` to batch-apply tags from a list (Evgeny)
+* Added hovercard on the user's karma display in the header (Evgeny)
+* Added option to hide ad blocks from logged in users (Evgeny)
+* Applied Askbot templates to the settings control panel (Evgeny)
+* Added option to auto-follow questions by the question posters with default "on" (Evgeny)
+* Support for Django 1.5
+* Auto-tweet option for questions and answers
+* Added Chech and Croatian translations
+* Disable/enable best answer feature
+* Allowed post owners repost answers and comments (this used to be mod-only function).
+* Answer editor is "folded" by default. Editor buttons and options show on click.
+* Management command `askbot_import_jive` to import data from Jive forums.
+* Added possibility to choose editor for comments: plain text, or same as
+  editor used for the questions or answers: WMD or TinyMCE.
+* Added ajax search to the tags page
+* Added a placeholder template for the custom javascript on the question page
+* Allowed to disable the big "ask" button.
+* Some support for the media compression (Tyler Mandry)
+* Allowed to enable and disable question scopes on the main page
 * Added full text support for some languages with Postgresql:
   Danish, Dutch, English, Finnish, French, German, Hungarian,
   Italian, Japanese (requires package textsearch_ja), Norwegian,
   Portugese, Romanian, Russian, Spanish, Swedish, Turkish.
-  
+* repost answer as a comment under the previous (older) answer
+* minor edit option for question and answer, to suppress email alerts
+* allowed tags to be created upon marking them as interesting/ignored/subscribed
 
 0.7.48 (Jan 28, 2013)
 ---------------------

@@ -15,7 +15,7 @@ GRAVATAR_TEMPLATE = (
                      '<a style="text-decoration:none" '
                      'href="%(user_profile_url)s"><img class="gravatar" '
                      'width="%(size)s" height="%(size)s" '
-                     'src="//www.gravatar.com/avatar/%(gravatar_hash)s'
+                     'src="%(gravatar_url)s/%(gravatar_hash)s'
                      '?s=%(size)s&amp;d=%(gravatar_type)s&amp;r=PG" '
                      'title="%(username)s" '
                      'alt="%(alt_text)s" /></a>')
@@ -37,6 +37,7 @@ def gravatar(user, size):
                     )
     #safe_username = template.defaultfilters.urlencode(username)
     return mark_safe(GRAVATAR_TEMPLATE % {
+        'gravatar_url': askbot_settings.GRAVATAR_BASE_URL,
         'user_profile_url': user_profile_url,
         'size': size,
         'gravatar_hash': functions.get_from_dict_or_object(user, 'gravatar'),

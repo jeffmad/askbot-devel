@@ -1,31 +1,38 @@
 import re
 from django import forms
-from django.http import str_to_unicode
 from django.contrib.auth.models import User
-from django.conf import settings
+from django.core.urlresolvers import reverse
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext_lazy as _
-from django.utils.safestring import mark_safe
 from askbot.conf import settings as askbot_settings
 from askbot.utils.slug import slugify
-from askbot.utils.functions import split_list
+from askbot.utils.functions import split_list, mark_safe_lazy
 from askbot import const
 from longerusername import MAX_USERNAME_LENGTH
 import logging
 import urllib
 
-DEFAULT_NEXT = '/' + getattr(settings, 'ASKBOT_URL')
-def clean_next(next, default = None):
+
+def clean_next(next, default=None):
     if next is None or not next.startswith('/'):
         if default:
             return default
         else:
-            return DEFAULT_NEXT
-    next = str_to_unicode(urllib.unquote(next), 'utf-8')
+            return reverse('index')
+    if isinstance(next, str):
+        next = unicode(urllib.unquote(next), 'utf-8', 'replace')
     next = next.strip()
     logging.debug('next url is %s' % next)
     return next
+
+def get_error_list(form_instance):
+    """return flat list of error values for the form"""
+    lists = form_instance.errors.values()
+    errors = list()
+    for error_list in lists:
+        errors.extend(list(error_list))
+    return errors
 
 def get_next_url(request, default = None):
     return clean_next(request.REQUEST.get('next'), default)
@@ -121,7 +128,7 @@ class UserNameField(StrippedNonEmptyCharField):
         max_length = MAX_USERNAME_LENGTH()
         super(UserNameField,self).__init__(
                 max_length=max_length,
-                widget=forms.TextInput(attrs=login_form_widget_attrs),
+                widget=forms.TextInput(attrs=widget_attrs),
                 label=label,
                 error_messages=error_messages,
                 **kw
@@ -219,7 +226,7 @@ class UserEmailField(forms.EmailField):
             widget=widget_class(
                     attrs=dict(login_form_widget_attrs, maxlength=200)
                 ),
-            label=mark_safe(_('Your email <i>(never shared)</i>')),
+            label=mark_safe_lazy(_('Your email <i>(never shared)</i>')),
             error_messages={
                 'required':_('email address is required'),
                 'invalid':_('please enter a valid email address'),
@@ -247,30 +254,36 @@ class UserEmailField(forms.EmailField):
                     allowed_email_domains=allowed_domains
                 ):
                 raise forms.ValidationError(self.error_messages['unauthorized'])
-        if askbot_settings.EMAIL_UNIQUE == True:
-            try:
-                user = User.objects.get(email = email)
-                logging.debug('email taken')
-                raise forms.ValidationError(self.error_messages['taken'])
-            except User.DoesNotExist:
-                logging.debug('email valid')
-                return email
-            except User.MultipleObjectsReturned:
-                logging.debug('email taken many times over')
-                raise forms.ValidationError(self.error_messages['taken'])
-        else:
-            return email 
+
+        try:
+            user = User.objects.get(email__iexact=email)
+            logging.debug('email taken')
+            raise forms.ValidationError(self.error_messages['taken'])
+        except User.DoesNotExist:
+            logging.debug('email valid')
+            return email
+        except User.MultipleObjectsReturned:
+            logging.critical('email taken many times over')
+            raise forms.ValidationError(self.error_messages['taken'])
 
 class SetPasswordForm(forms.Form):
-    password1 = forms.CharField(widget=forms.PasswordInput(attrs=login_form_widget_attrs),
-                                label=_('Password'),
-                                error_messages={'required':_('password is required')},
-                                )
-    password2 = forms.CharField(widget=forms.PasswordInput(attrs=login_form_widget_attrs),
-                                label=mark_safe(_('Password <i>(please retype)</i>')),
+    password1 = forms.CharField(
+                            widget=forms.PasswordInput(
+                                attrs=login_form_widget_attrs,
+                                render_value=True
+                            ),
+                            label=_('Password'),
+                            error_messages={'required':_('password is required')},
+                        )
+    password2 = forms.CharField(
+                                widget=forms.PasswordInput(
+                                    attrs=login_form_widget_attrs,
+                                    render_value=True
+                                ),
+                                label=_('Password retyped'),
                                 error_messages={'required':_('please, retype your password'),
-                                                'nomatch':_('sorry, entered passwords did not match, please try again')},
-                                )
+                                                'nomatch':_('entered passwords did not match, please try again')},
+                            )
 
     def __init__(self, data=None, user=None, *args, **kwargs):
         super(SetPasswordForm, self).__init__(data, *args, **kwargs)
@@ -290,4 +303,3 @@ class SetPasswordForm(forms.Form):
                 raise forms.ValidationError(self.fields['password2'].error_messages['nomatch'])
         else:
             return self.cleaned_data['password2']
-

@@ -24,7 +24,22 @@ Entering live settings in settings.py file
 ==========================================
 
 You might want to bypass live settings and enter them directly
-in the ``settings.py`` file in the ``LIVESETTINGS_OPTIONS`` dictionary.
+in the ``settings.py`` file.
+
+Currently there are two ways to do this:
+
+1. Simply add variable with the same name as defined in `askbot/conf` files, 
+   but prefixed with `ASKBOT_` and the corresponding value.
+   For example, add `ASKBOT_RSS_ENABLED = False` to disable the rss.
+   In `askbot/conf` this value is defined simply as `RSS_ENABLED`.
+
+2. Put settings into the ``LIVESETTINGS_OPTIONS`` dictionary,
+   this way you can assign livesettings values to specific site by ID,
+   which may or may not be useful for the multi-portal (multi-site) askbot setup.
+
+The first method above overrides the second.
+
+Here is a more detailed description on how to use the `LIVESETTINGS_OPTIONS` method:
 
 Having live settings overridden from the ``settings.py`` file may
 somewhat speed up your site

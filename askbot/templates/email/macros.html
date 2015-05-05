@@ -1,60 +1,73 @@
+{%- macro mailto_link(user) -%}
+    <a href="mailto:{{ user.email }}">{{ user.email }}</a>
+{%- endmacro -%}
+
 {% macro quoted_post(
-        post = None,
-        quote_level = 0,
-        format = None,
-        is_leaf_post = False
+        post=None,
+        recipient=None,
+        quote_level=0,
+        format=None,
+        is_leaf_post=False
     )
 %}
     {% spaceless %}
         {{ start_quote(quote_level) }}
-            {% set author = post.author.username|escape %}
-            {% if post.post_type == 'question' %}
-            {% if quote_level > 0 %}
-            <p style="font-size:10px; font-weight: bold;">
+
+            {% if recipient|can_see_private_user_data(post.author) %}
+                {% set author = post.author.username|escape ~ '/(' ~ mailto_link(post.author) ~ ')' %}
+            {% elif post.is_anonymous %}
+                {% set author = post.author.get_name_of_anonymous_user()|escape %}
             {% else %}
-            <p style="font-size:20px; font-weight: bold; margin: 10px 0">
+                {% set author = post.author.username|escape %}
             {% endif %}
-                    {% if format == 'parent_subthread' %}
-                        {% if is_leaf_post %}
-                            {% trans %}Question by {{ author }}:{% endtrans %}
+
+            {% if post.post_type == 'question' %}
+                {% if quote_level > 0 %}
+                <p style="font-size:10px; font-weight: bold;">
+                {% else %}
+                <p style="font-size:20px; font-weight: bold; margin: 10px 0">
+                {% endif %}
+                        {% if format == 'parent_subthread' %}
+                            {% if is_leaf_post %}
+                                {% trans %}Started by {{ author }}:{% endtrans %}
+                            {% else %}
+                                {% trans -%}
+                                    In reply to {{ author }}:
+                                {%- endtrans %}
+                            {% endif %}
                         {% else %}
-                            {% trans -%}
-                                In reply to {{ author }}'s question:
-                            {%- endtrans %}
+                            {{ settings.WORDS_QUESTION_SINGULAR|title|escape }} :
                         {% endif %}
-                    {% else %}
-                        {% trans %}Question :{% endtrans %}
-                    {% endif %}
-                    {{ post.thread.title }}
-            </p>
-            {% if quote_level > 0 %}
-            <p style="font-size:10px; font-weight: bold;">
-                    {% if format != 'parent_subthread' %}
-                        {% trans %}Asked by {{ author }}:{% endtrans %}
-                    {% endif %}
-            </p>
-            {% endif %}
-            {% set tag_names = post.get_tag_names() %}
-            {% if tag_names %}
-            <p style="font-size:10px; font-style:italic;">
-                {% trans %}Tags:{% endtrans %}
-                {{ tag_names|join(', ') }}.
-            </p>
-            {% endif %}
+                        {{ post.thread.title }}
+                </p>
+                {% if quote_level > 0 %}
+                <p style="font-size:10px; font-weight: bold;">
+                        {% if format != 'parent_subthread' %}
+                            {% trans %}Started by {{ author }}:{% endtrans %}
+                        {% endif %}
+                </p>
+                {% endif %}
+                {% set tag_names = post.get_tag_names() %}
+                {% if tag_names %}
+                <p style="font-size:10px; font-style:italic;">
+                    {% trans %}Tags:{% endtrans %}
+                    {{ tag_names|join(', ') }}.
+                </p>
+                {% endif %}
             {% elif post.post_type == 'answer' %}
                 <p style="font-size:10px; font-weight: bold;">
                     {% if format == 'parent_subthread' %}
                         {% if is_leaf_post %}
                             {% trans -%}
-                                {{ author }}'s answer:
+                                {{ author }}'s response:
                             {%- endtrans %}
                         {% else %}
                             {% trans -%}
-                                In reply to {{ author }}'s answer:
+                                In reply to {{ author }}:
                             {%- endtrans %}
                         {% endif %}
                     {% else %}
-                        {% trans %}Answered by {{ author }}:{% endtrans %}
+                        {% trans %}Replied by {{ author }}:{% endtrans %}
                     {% endif %}
                 </p>
             {% else %}

@@ -5,11 +5,26 @@ import logging
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext as _
-from django.utils.translation import ugettext_lazy
 from askbot.models.post import Post
 from askbot.models.base import BaseQuerySetManager
 from askbot.conf import settings as askbot_settings
 from askbot import mail
+
+def emailed_content_needs_moderation(email):
+    """True, if we moderate content and if email address
+    is marked for moderation
+    todo: maybe this belongs to a separate "moderation" module
+    """
+    if askbot_settings.CONTENT_MODERATION_MODE == 'premoderation':
+        group_name = email.split('@')[0]
+        from askbot.models.user import Group
+        try:
+            group = Group.objects.get(name=group_name, deleted=False)
+            return group.group.profile.moderate_email
+        except Group.DoesNotExist:
+            pass
+    return False
+
 
 class ReplyAddressManager(BaseQuerySetManager):
     """A manager for the :class:`ReplyAddress` model"""
@@ -35,12 +50,12 @@ class ReplyAddressManager(BaseQuerySetManager):
 			
 
 REPLY_ACTION_CHOICES = (
-    ('post_answer', ugettext_lazy('Post an answer')),
-    ('post_comment', ugettext_lazy('Post a comment')),
-    ('replace_content', ugettext_lazy('Edit post')),
-    ('append_content', ugettext_lazy('Append to post')),
-    ('auto_answer_or_comment', ugettext_lazy('Answer or comment, depending on the size of post')),
-    ('validate_email', ugettext_lazy('Validate email and record signature')),
+    ('post_answer', 'Post an answer'),
+    ('post_comment', 'Post a comment'),
+    ('replace_content', 'Edit post'),
+    ('append_content', 'Append to post'),
+    ('auto_answer_or_comment', 'Answer or comment, depending on the size of post'),
+    ('validate_email', 'Validate email and record signature'),
 )
 class ReplyAddress(models.Model):
     """Stores a reply address for the post

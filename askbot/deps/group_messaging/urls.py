@@ -1,6 +1,9 @@
 """url configuration for the group_messaging application"""
-from django.conf.urls.defaults import patterns
-from django.conf.urls.defaults import url
+try:
+    from django.conf.urls import patterns, url
+except ImportError:
+    from django.conf.urls.defaults import patterns, url
+
 from group_messaging import views
 
 urlpatterns = patterns('',
@@ -15,9 +18,14 @@ urlpatterns = patterns('',
         name='thread_details'
     ),
     url(
-        '^threads/(?P<thread_id>\d+)/delete-or-restore/$',
-        views.DeleteOrRestoreThread().as_view(),
-        name='delete_or_restore_thread'
+        '^threads/(?P<thread_id>\d+)/delete/$',
+        views.DeleteOrRestoreThread('delete').as_view(),
+        name='delete_thread'
+    ),
+    url(
+        '^threads/(?P<thread_id>\d+)/restore/$',
+        views.DeleteOrRestoreThread('restore').as_view(),
+        name='restore_thread'
     ),
     url(
         '^threads/create/$',

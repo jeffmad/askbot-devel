@@ -1,11 +1,11 @@
 {# todo: add tips to widen selection #}
 <p class="evenMore" style="padding-top:30px;text-align:center;">
 {% if search_state.scope == "unanswered" %}
-    {% trans %}There are no unanswered questions here{% endtrans %}
+    {{ settings.WORDS_THERE_ARE_NO_UNANSWERED_QUESTIONS_HERE|escape }}
 {% endif %}
-{% if search_state.scope == "favorite" %}
-    {% trans %}No questions here. {% endtrans %}
-    {% trans %}Please follow some questions or follow some users.{% endtrans %}
+{% if search_state.scope == "followed" %}
+    {{ settings.WORDS_NO_QUESTIONS_HERE|escape }}
+    {{ settings.WORDS_PLEASE_FOLLOW_QUESTIONS|escape }}
 {% endif %}
 </p>
 {% if search_state.query or search_state.tags or search_state.author %}
@@ -27,5 +27,5 @@
 </p>
 {% endif %}
 <p class="evenMore" style="text-align:center">
-<a href="{% url ask %}">{% trans %}Please always feel free to ask your question!{% endtrans %}</a>
+<a href="{% url ask %}">{{ settings.WORDS_PLEASE_FEEL_FREE_TO_ASK_YOUR_QUESTION|escape }}</a>
 </p>

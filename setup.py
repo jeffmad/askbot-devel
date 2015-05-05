@@ -47,9 +47,9 @@ setup(
         'Topic :: Communications',
         'Topic :: Internet :: WWW/HTTP :: WSGI :: Application',
     ],
-    long_description = """Askbot will work alone or with other django apps (with some limitations, please see below), Django 1.1.1 - 1.2.3(*), MySQL(**) and PostgresQL(recommended) (>=8.3).
+    long_description = """Askbot will work alone or with other django apps (with some limitations, please see below), Django 1.5-1.6, PostgresQL(recommended) (>=8.3) and MySQL(**) (MyISAM backend only - see footnote **)
 
-Questions? Suggestions? Found a bug? -> please post at http://askbot.org/
+Questions? Suggestions? Found a bug? -> please post at http://askbot.org/en/questions/
 
 Features
 ========
@@ -59,7 +59,7 @@ Features
 * per-user inbox for responses & flagged items (for moderators)
 * email alerts - instant and delayed, optionally tag filtered
 * search by full text and a set of tags simultaneously
-* can import data from stackexchange database file
+* imports data from StackExchange, Jive, ZenDesk
 
 Installation
 ============
@@ -75,7 +75,6 @@ Methods to install code
 -----------------------
 
 * **pip install askbot**
-* **easy_install askbot**
 * **download .tar.gz** file from the bottom of this page, then run **python setup.py install**
 * clone code from the github **git clone git://github.com/ASKBOT/askbot-devel.git**, and then **python setup.py develop**
 
@@ -104,7 +103,7 @@ Askbot patches `auth_user` table. The migration script will automatically add mi
 
 Included into askbot there are two forked apps: `django_authopenid` and `livesettings`. If you have these apps on your site, you may have trouble installing askbot.
 
-User registration and login system is bundled with Askbot. It is quite good though, it allows logging in with password and many authentication service providers, including popular social services and recover account by email.
+User registration and login system is bundled with Askbot, but can be replaced with any other. It is quite good though, it allows logging in with password and many authentication service providers, including popular social services and recover account by email.
 
 If there are any other collisions, askbot will simply fail to install, it will not damage your data.
 
@@ -114,8 +113,6 @@ Askbot is based on CNPROG project by Mike Chen and Sailing Cai, project which wa
 
 Footnotes
 =========
-(*) - If you want to install with django 1.2.x a dependency "Coffin-0.3" needs to be replaced with "Coffin-0.3.3" - this will be automated in the future versions of the setup script.
-
 (**) - With MySQL you have to use MyISAM data backend, because it's the only one that supports Full Text Search."""
 )
 

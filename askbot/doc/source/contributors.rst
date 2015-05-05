@@ -43,12 +43,37 @@ Programming, bug fixes and documentation
 * `Paul Backhouse <https://github.com/powlo>`_
 * `jtrain <https://github.com/jtrain>`_
 * Niki Rocco
+* `Tyler Mandry <https://github.com/tmandry>`_
+* `Jorge López Pérez <https://github.com/adobo>`_
+* `Zafer Cakmak <https://github.com/xaph>`_
+* `Kevin Porterfield <http://www.shotgunsoftware.com>_`
+* `Robert Martin <https://github.com/bobbydavid>_`
+* `Director <http://codeflow.co.kr>`_
+* `Stéphane Klein <http://stephane-klein.info>`_
+* `Andrew Chen <https://github.com/yongjhih>`_
+* `Benjamin Abel <https://github.com/BenjaminABEL>`_
+* `Pami Ketolainen <https://github.com/keto>`_
+* `Hamdi <https://github.com/Hamdy>`_
+* `michas2 <https://github.com/michas2>`_
+* `Francis Devereux <https://github.com/frankoid>`_
+* `Andrew Chen <https://github.com/yongjhih>`_
+* `Egil Moeller <https://github.com/redhog>`_
+* `Jerry Zhenlei Cai <https://github.com/jerryzhenleicai>`_
+* `Dmitry <https://github.com/dmzio>`_
+* `Ruslan Keba <https://github.com/rukeba>`_
+* `Vanessa Hänni <https://github.com/n3ssi3>`_
+* `Vadim Sikora <https://github.com/vxsx>`_
+* `Zhe Li <https://github.com/zheli>`_
 
 Translations
 ------------
+Thanks for the help to all translators.
+If you believe you were incorrectly missed out of this list,
+please let us know at support@askbot.com.
+
 * Mike Chen, Sailing Cai, suyu8776 - Chinese
 * Bruno Sarlo, Adolfo Fitoria, Francisco Espinoza - Spanish
-* Evgeny Kalinin - Russian
+* Evgeny Kalinin, Andrey Komrachkov - Russian
 * Evgeny Fadeev - English
 * Oktay Yildiz, Onur Mat, Cemre - Turkish
 * Jérôme Blondon (bearstech) - French
@@ -56,5 +81,8 @@ Translations
 * Pekka Järvinen - Finnish
 * Adi Robian - Romanian
 * `Stefano Mancini <https://github.com/xponrails>`_, Dario Ghilardi, Federico Poloni, `Luca Ferroni <http://www.linkedin.com/in/lucaferroni>`_ - Italian
-* `Jordi Bofill <https://github.com/jbofill>`_ - Catalan
-
+* Cong It, Nguyen Long, ppranhh - Vietnamese
+* `Jordi Bofill <https://github.gom/jbofill>`_ - Catalan
+* Vašek Chalupníček - Chech
+* Dario Kolak - Croatian
+.

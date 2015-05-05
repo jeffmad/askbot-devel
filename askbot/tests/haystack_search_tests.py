@@ -12,7 +12,9 @@ class HaystackSearchTests(AskbotTestCase):
     """
     def setUp(self):
         self._old_value = getattr(settings, 'ENABLE_HAYSTACK_SEARCH', False)
+        self._old_search_engine = getattr(settings, 'HAYSTACK_SEARCH_ENGINE', 'simple')
         setattr(settings, "ENABLE_HAYSTACK_SEARCH", True)
+        setattr(settings, "HAYSTACK_SEARCH_ENGINE", 'simple')
 
         self.user = self.create_user(username='gepeto')
         self.other_user = self.create_user(username = 'pinocho')
@@ -53,6 +55,7 @@ class HaystackSearchTests(AskbotTestCase):
 
     def tearDown(self):
         setattr(settings, "ENABLE_HAYSTACK_SEARCH", self._old_value)
+        setattr(settings, "HAYSTACK_SEARCH_ENGINE", self._old_search_engine)
 
     @skipIf('haystack' not in settings.INSTALLED_APPS,
         'Haystack not setup')
@@ -88,14 +91,16 @@ class HaystackSearchTests(AskbotTestCase):
     @skipIf('haystack' not in settings.INSTALLED_APPS,
         'Haystack not setup')
     def test_get_django_queryset(self):
-        '''makes a query that can return multiple models and test
-        get_django_queryset() method from AskbotSearchQuerySet'''
+        '''makes a query that can return multiple models'''
         #gepeto is present in profile and in question
-        from askbot.search.haystack import AskbotSearchQuerySet
-        qs = AskbotSearchQuerySet().filter(content='gepeto').get_django_queryset(User)
+        from askbot.search.haystack.helpers import get_threads_from_query, get_users_from_query
+
+        qs = get_users_from_query(query='gepeto')
+
         for instance in qs:
            self.assertTrue(isinstance(instance, User))
 
-        qs = AskbotSearchQuerySet().filter(content='gepeto').get_django_queryset(models.Thread)
+        qs = get_threads_from_query(query='gepeto')
+
         for instance in qs:
            self.assertTrue(isinstance(instance, models.Thread))

@@ -8,6 +8,7 @@ from django.conf import settings as django_settings
 from askbot.skins import utils as skin_utils
 from django.utils.translation import ugettext_lazy as _
 from askbot import const
+import re
 
 USER_SETTINGS = livesettings.ConfigurationGroup(
                     'USER_SETTINGS',
@@ -19,7 +20,7 @@ settings.register(
     livesettings.LongStringValue(
         USER_SETTINGS,
         'NEW_USER_GREETING',
-        default='',
+        default=_('Welcome to our community!'),
         description=_('On-screen greeting shown to the new users')
     )
 )
@@ -27,18 +28,18 @@ settings.register(
 settings.register(
     livesettings.BooleanValue(
         USER_SETTINGS,
-        'ALLOW_ANONYMOUS_FEEDBACK',
+        'EDITABLE_SCREEN_NAME',
         default=True,
-        description=_('Allow anonymous users send feedback')
+        description=_('Allow editing user screen name')
     )
 )
 
 settings.register(
     livesettings.BooleanValue(
         USER_SETTINGS,
-        'EDITABLE_SCREEN_NAME',
-        default = True,
-        description = _('Allow editing user screen name')
+        'SHOW_ADMINS_PRIVATE_USER_DATA',
+        default=False,
+        description=_('Show email addresses to moderators')
     )
 )
 
@@ -112,6 +113,23 @@ settings.register(
     )
 )
 
+def gravatar_url_callback(old, new):
+    """strips trailing slash"""
+    url_re = re.compile(r'([^/]*)/+$')
+    return url_re.sub(r'\1', new)
+
+settings.register(
+    livesettings.StringValue(
+        USER_SETTINGS,
+        'GRAVATAR_BASE_URL',
+        description=_(
+                'Base URL for the gravatar service'
+            ),
+        default='//www.gravatar.com/avatar',
+        update_callback=gravatar_url_callback
+    )
+)
+
 settings.register(
     livesettings.BooleanValue(
         USER_SETTINGS,
@@ -123,7 +141,6 @@ settings.register(
         ) 
     )
 )
-
 
 settings.register(
     livesettings.StringValue(
