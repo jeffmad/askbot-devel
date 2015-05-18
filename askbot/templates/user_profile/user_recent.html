@@ -11,7 +11,7 @@
                 <td class="timestamp">{{ timeago(act.time) }}</td>
                 <td class="action-type">{{ act.type }}</td>
                 <td class="description">
-                    {% if act.is_badge %}
+                    {% if act.badge and act.is_badge %}
                         <a href="{{act.badge.get_absolute_url()}}"
                            title="{{ act.badge.get_type_display() }} : {% trans description=act.badge.get_description() %}{{description}}{% endtrans %}"
                            class="medal">

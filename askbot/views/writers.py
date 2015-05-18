@@ -669,12 +669,17 @@ def answer(request, id, form_class=forms.AnswerForm):#process a new answer
                     request.user.message_set.create(message = unicode(e))
             else:
                 request.session.flush()
+                ip = request.META.get('REMOTE_ADDR')
+                if ip == '':
+                    ip = request.META.get('HTTP_X_FORWARDED_FOR')
+                if ip == '':
+                    ip = '127.0.0.1'
                 models.AnonymousAnswer.objects.create(
                     question=question,
                     wiki=form.cleaned_data['wiki'],
                     text=form.cleaned_data['text'],
                     session_key=request.session.session_key,
-                    ip_addr=request.META.get('REMOTE_ADDR'),
+                    ip_addr=ip,
                 )
                 return HttpResponseRedirect(url_utils.get_login_url())
 

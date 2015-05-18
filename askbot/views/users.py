@@ -14,6 +14,7 @@ import logging
 import operator
 import urllib
 
+from django.db.models import DateTimeField
 from django.db.models import Count
 from django.db.models import Q
 from django.conf import settings as django_settings
@@ -678,19 +679,35 @@ def user_recent(request, user, context):
             continue
 
         if activity.activity_type == const.TYPE_ACTIVITY_PRIZE:
+            t = datetime.datetime.now()
+            #t = DateTimeField(default=datetime.datetime.now)
+            if hasattr(content, 'awarded_at'):
+                t = content.awarded_at
+            b = None
+            if hasattr(content, 'badge'):
+                b = content.badge
             event = AwardEvent(
-                time=content.awarded_at,
+                time=t,
                 type=activity.activity_type,
                 content_object=content.content_object,
-                badge=content.badge,
+                badge=b,
             )
         else:
+            t = ''
+            if hasattr(content, 'thread'):
+                t = content.thread.title
+            u = ''
+            if hasattr(content, 'get_absolute_url'):
+                u = content.get_absolute_url()
+            s = ''
+            if hasattr(content, 'summary'):
+                s = content.summary
             event = Event(
                 time=activity.active_at,
                 type=activity.activity_type,
-                title=content.thread.title,
-                summary=content.summary,
-                url=content.get_absolute_url()
+                title=t,
+                summary=s,
+                url=u
             )
 
         activities.append(event)

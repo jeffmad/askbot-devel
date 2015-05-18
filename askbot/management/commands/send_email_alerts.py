@@ -29,7 +29,8 @@ def get_all_origin_posts(mentions):
     origin_posts = set()
     for mention in mentions:
         post = mention.content_object
-        origin_posts.add(post.get_origin_post())
+        if hasattr(post, 'get_origin_post'):
+            origin_posts.add(post.get_origin_post())
     return list(origin_posts)
 
 #todo: refactor this as class

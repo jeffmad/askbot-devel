@@ -280,7 +280,10 @@ class Activity(models.Model):
         return self.content_object.get_snippet(max_length)
 
     def get_absolute_url(self):
-        return self.content_object.get_absolute_url()
+        u = ''
+        if hasattr(self.content_object, 'get_absolute_url'):
+            u = self.content_object.get_absolute_url()
+        return u
 
 class EmailFeedSettingManager(models.Manager):
     def filter_subscribers(
